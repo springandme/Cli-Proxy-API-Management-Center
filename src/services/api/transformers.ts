@@ -130,8 +130,12 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
   const prefix = normalizePrefix(record?.prefix ?? record?.['prefix']);
   if (prefix) config.prefix = prefix;
   const baseUrl = record ? record['base-url'] ?? record.baseUrl : undefined;
+  const denoProxyHost = record
+    ? record['deno-proxy-host'] ?? record.denoProxyHost ?? record['deno_proxy_host'] ?? record.deno_proxy_host
+    : undefined;
   const proxyUrl = record ? record['proxy-url'] ?? record.proxyUrl : undefined;
   if (baseUrl) config.baseUrl = String(baseUrl);
+  if (denoProxyHost) config.denoProxyHost = String(denoProxyHost);
   const websockets = normalizeBoolean(record?.websockets ?? record?.['websockets']);
   if (websockets !== undefined) config.websockets = websockets;
   if (proxyUrl) config.proxyUrl = String(proxyUrl);

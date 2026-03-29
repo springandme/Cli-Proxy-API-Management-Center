@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { HeaderInputList } from '@/components/ui/HeaderInputList';
 import { ModelInputList } from '@/components/ui/ModelInputList';
 import { Modal } from '@/components/ui/Modal';
+import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
@@ -24,6 +25,9 @@ import layoutStyles from './AiProvidersEditLayout.module.scss';
 import styles from './AiProvidersPage.module.scss';
 
 type LocationState = { fromAiProviders?: boolean } | null;
+type CodexRelayMode = 'direct' | 'deno';
+
+const CODEX_OFFICIAL_BASE_URL = 'https://chatgpt.com/backend-api/codex';
 
 const buildEmptyForm = (): ProviderFormState => ({
   apiKey: '',
@@ -31,6 +35,7 @@ const buildEmptyForm = (): ProviderFormState => ({
   prefix: '',
   baseUrl: '',
   websockets: false,
+  denoProxyHost: '',
   proxyUrl: '',
   headers: [],
   models: [],
@@ -63,15 +68,17 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
     return acc;
   }, []);
 
-const buildCodexSignature = (form: ProviderFormState) =>
+const buildCodexSignature = (form: ProviderFormState, relayMode: CodexRelayMode) =>
   JSON.stringify({
     apiKey: String(form.apiKey ?? '').trim(),
     priority:
       form.priority !== undefined && Number.isFinite(form.priority)
         ? Math.trunc(form.priority)
         : null,
+    relayMode,
     prefix: String(form.prefix ?? '').trim(),
     baseUrl: String(form.baseUrl ?? '').trim(),
+    denoProxyHost: String(form.denoProxyHost ?? '').trim(),
     websockets: Boolean(form.websockets),
     proxyUrl: String(form.proxyUrl ?? '').trim(),
     headers: normalizeHeaderEntries(form.headers),
@@ -98,8 +105,9 @@ export function AiProvidersCodexEditPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<ProviderFormState>(() => buildEmptyForm());
+  const [relayMode, setRelayMode] = useState<CodexRelayMode>('direct');
   const [baselineSignature, setBaselineSignature] = useState(() =>
-    buildCodexSignature(buildEmptyForm())
+    buildCodexSignature(buildEmptyForm(), 'direct')
   );
 
   const [modelDiscoveryOpen, setModelDiscoveryOpen] = useState(false);
@@ -122,6 +130,13 @@ export function AiProvidersCodexEditPage() {
   }, [configs, editIndex]);
 
   const invalidIndex = editIndex !== null && !initialData;
+  const relayModeOptions = useMemo(
+    () => [
+      { value: 'direct', label: t('ai_providers.codex_relay_mode_direct') },
+      { value: 'deno', label: t('ai_providers.codex_relay_mode_deno') },
+    ],
+    [t]
+  );
 
   const title =
     editIndex !== null
@@ -178,25 +193,36 @@ export function AiProvidersCodexEditPage() {
     if (loading) return;
 
     if (initialData) {
+      const initialRelayMode: CodexRelayMode = initialData.denoProxyHost?.trim() ? 'deno' : 'direct';
       const nextForm: ProviderFormState = {
         ...initialData,
-        websockets: Boolean(initialData.websockets),
+        baseUrl:
+          initialRelayMode === 'deno'
+            ? initialData.baseUrl?.trim() || CODEX_OFFICIAL_BASE_URL
+            : initialData.baseUrl,
+        websockets:
+          initialRelayMode === 'deno' ? false : Boolean(initialData.websockets),
+        denoProxyHost: initialData.denoProxyHost?.trim() || '',
         headers: headersToEntries(initialData.headers),
         modelEntries: modelsToEntries(initialData.models),
         excludedText: excludedModelsToText(initialData.excludedModels),
       };
+      setRelayMode(initialRelayMode);
       setForm(nextForm);
-      setBaselineSignature(buildCodexSignature(nextForm));
+      setBaselineSignature(buildCodexSignature(nextForm, initialRelayMode));
       return;
     }
     const nextForm = buildEmptyForm();
+    setRelayMode('direct');
     setForm(nextForm);
-    setBaselineSignature(buildCodexSignature(nextForm));
+    setBaselineSignature(buildCodexSignature(nextForm, 'direct'));
   }, [initialData, loading]);
 
-  const currentSignature = useMemo(() => buildCodexSignature(form), [form]);
+  const currentSignature = useMemo(() => buildCodexSignature(form, relayMode), [form, relayMode]);
   const isDirty = baselineSignature !== currentSignature;
   const canGuard = !loading && !saving && !invalidIndexParam && !invalidIndex;
+  const effectiveBaseUrl =
+    relayMode === 'deno' ? CODEX_OFFICIAL_BASE_URL : String(form.baseUrl ?? '').trim();
 
   const { allowNextNavigation } = useUnsavedChangesGuard({
     enabled: canGuard,
@@ -274,6 +300,9 @@ export function AiProvidersCodexEditPage() {
   );
 
   const fetchCodexModelDiscovery = useCallback(async () => {
+    if (relayMode === 'deno') {
+      return;
+    }
     const requestId = (modelDiscoveryRequestIdRef.current += 1);
     setModelDiscoveryFetching(true);
     setModelDiscoveryError('');
@@ -285,7 +314,7 @@ export function AiProvidersCodexEditPage() {
       );
       const apiKey = form.apiKey.trim() || undefined;
       const list = await modelsApi.fetchV1ModelsViaApiCall(
-        form.baseUrl ?? '',
+        effectiveBaseUrl,
         hasCustomAuthorization ? undefined : apiKey,
         headerObject
       );
@@ -301,7 +330,7 @@ export function AiProvidersCodexEditPage() {
         setModelDiscoveryFetching(false);
       }
     }
-  }, [form.apiKey, form.baseUrl, form.headers, t]);
+  }, [effectiveBaseUrl, form.apiKey, form.headers, relayMode, t]);
 
   useEffect(() => {
     if (!modelDiscoveryOpen) {
@@ -311,7 +340,8 @@ export function AiProvidersCodexEditPage() {
       return;
     }
 
-    const nextEndpoint = modelsApi.buildV1ModelsEndpoint(form.baseUrl ?? '');
+    const nextEndpoint =
+      relayMode === 'deno' ? '' : modelsApi.buildV1ModelsEndpoint(effectiveBaseUrl);
     setModelDiscoveryEndpoint(nextEndpoint);
     setDiscoveredModels([]);
     setModelDiscoverySearch('');
@@ -338,7 +368,7 @@ export function AiProvidersCodexEditPage() {
     autoFetchSignatureRef.current = signature;
 
     void fetchCodexModelDiscovery();
-  }, [fetchCodexModelDiscovery, form.apiKey, form.baseUrl, form.headers, modelDiscoveryOpen]);
+  }, [effectiveBaseUrl, fetchCodexModelDiscovery, form.apiKey, form.headers, modelDiscoveryOpen, relayMode]);
 
   useEffect(() => {
     const availableNames = new Set(discoveredModels.map((model) => model.name));
@@ -393,10 +423,15 @@ export function AiProvidersCodexEditPage() {
   const handleSave = useCallback(async () => {
     if (!canSave) return;
 
-    const trimmedBaseUrl = (form.baseUrl ?? '').trim();
+    const trimmedBaseUrl = effectiveBaseUrl;
     const baseUrl = trimmedBaseUrl || undefined;
     if (!baseUrl) {
       showNotification(t('notification.codex_base_url_required'), 'error');
+      return;
+    }
+    const denoProxyHost = String(form.denoProxyHost ?? '').trim();
+    if (relayMode === 'deno' && !denoProxyHost) {
+      showNotification(t('notification.codex_deno_proxy_host_required'), 'error');
       return;
     }
 
@@ -408,7 +443,8 @@ export function AiProvidersCodexEditPage() {
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
-        websockets: Boolean(form.websockets),
+        websockets: relayMode === 'deno' ? false : Boolean(form.websockets),
+        denoProxyHost: relayMode === 'deno' ? denoProxyHost : undefined,
         proxyUrl: form.proxyUrl?.trim() || undefined,
         headers: buildHeaderObject(form.headers),
         models: entriesToModels(form.modelEntries),
@@ -430,7 +466,7 @@ export function AiProvidersCodexEditPage() {
         'success'
       );
       allowNextNavigation();
-      setBaselineSignature(buildCodexSignature(form));
+      setBaselineSignature(buildCodexSignature(form, relayMode));
       handleBack();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
@@ -445,8 +481,10 @@ export function AiProvidersCodexEditPage() {
     clearCache,
     configs,
     editIndex,
+    effectiveBaseUrl,
     form,
     handleBack,
+    relayMode,
     showNotification,
     t,
     updateConfigValue,
@@ -458,7 +496,8 @@ export function AiProvidersCodexEditPage() {
     !loading &&
     !invalidIndexParam &&
     !invalidIndex &&
-    Boolean((form.baseUrl ?? '').trim());
+    relayMode !== 'deno' &&
+    Boolean(effectiveBaseUrl);
   const canApplyModelDiscovery =
     !disableControls && !saving && !modelDiscoveryFetching && modelDiscoverySelected.size > 0;
 
@@ -508,6 +547,25 @@ export function AiProvidersCodexEditPage() {
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
               disabled={disableControls || saving}
             />
+            <div className="form-group">
+              <label>{t('ai_providers.codex_relay_mode_label')}</label>
+              <Select
+                value={relayMode}
+                options={relayModeOptions}
+                onChange={(value) => {
+                  const nextMode = value as CodexRelayMode;
+                  setRelayMode(nextMode);
+                  setForm((prev) => ({
+                    ...prev,
+                    baseUrl: nextMode === 'deno' ? CODEX_OFFICIAL_BASE_URL : prev.baseUrl,
+                    websockets: nextMode === 'deno' ? false : prev.websockets,
+                  }));
+                }}
+                ariaLabel={t('ai_providers.codex_relay_mode_label')}
+                disabled={disableControls || saving}
+              />
+              <div className="hint">{t('ai_providers.codex_relay_mode_hint')}</div>
+            </div>
             <Input
               label={t('ai_providers.priority_label')}
               hint={t('ai_providers.priority_hint')}
@@ -534,19 +592,37 @@ export function AiProvidersCodexEditPage() {
             />
             <Input
               label={t('ai_providers.codex_add_modal_url_label')}
-              value={form.baseUrl ?? ''}
+              value={effectiveBaseUrl}
               onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              disabled={disableControls || saving}
+              hint={
+                relayMode === 'deno' ? t('ai_providers.codex_deno_base_url_hint') : undefined
+              }
+              disabled={disableControls || saving || relayMode === 'deno'}
             />
+            {relayMode === 'deno' && (
+              <Input
+                label={t('ai_providers.codex_deno_proxy_host_label')}
+                value={form.denoProxyHost ?? ''}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, denoProxyHost: e.target.value }))
+                }
+                hint={t('ai_providers.codex_deno_proxy_host_hint')}
+                disabled={disableControls || saving}
+              />
+            )}
             <div className="form-group">
               <label>{t('ai_providers.codex_websockets_label')}</label>
               <ToggleSwitch
-                checked={Boolean(form.websockets)}
+                checked={relayMode === 'deno' ? false : Boolean(form.websockets)}
                 onChange={(value) => setForm((prev) => ({ ...prev, websockets: value }))}
-                disabled={disableControls || saving}
+                disabled={disableControls || saving || relayMode === 'deno'}
                 ariaLabel={t('ai_providers.codex_websockets_label')}
               />
-              <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
+              <div className="hint">
+                {relayMode === 'deno'
+                  ? t('ai_providers.codex_websockets_deno_hint')
+                  : t('ai_providers.codex_websockets_hint')}
+              </div>
             </div>
             <Input
               label={t('ai_providers.codex_add_modal_proxy_label')}
@@ -594,7 +670,11 @@ export function AiProvidersCodexEditPage() {
                   </Button>
                 </div>
               </div>
-              <div className={styles.sectionHint}>{t('ai_providers.codex_models_hint')}</div>
+              <div className={styles.sectionHint}>
+                {relayMode === 'deno'
+                  ? t('ai_providers.codex_models_deno_hint')
+                  : t('ai_providers.codex_models_hint')}
+              </div>
 
               <ModelInputList
                 entries={form.modelEntries}

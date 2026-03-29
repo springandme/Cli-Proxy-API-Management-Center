@@ -39,6 +39,7 @@ export interface ProviderKeyConfig {
   prefix?: string;
   baseUrl?: string;
   websockets?: boolean;
+  denoProxyHost?: string;
   proxyUrl?: string;
   headers?: Record<string, string>;
   models?: ModelAlias[];

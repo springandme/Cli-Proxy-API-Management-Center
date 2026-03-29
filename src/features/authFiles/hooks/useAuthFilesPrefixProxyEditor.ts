@@ -6,12 +6,16 @@ import { useNotificationStore } from '@/stores';
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import {
+  applyCodexAuthFileDenoProxy,
   applyCodexAuthFileWebsockets,
+  normalizeCodexRelayMode,
   normalizeExcludedModels,
   parseDisableCoolingValue,
   parseExcludedModelsText,
   parsePriorityValue,
+  readCodexAuthFileDenoProxyHost,
   readCodexAuthFileWebsockets,
+  type CodexRelayMode,
 } from '@/features/authFiles/constants';
 
 export type PrefixProxyEditorField =
@@ -20,6 +24,8 @@ export type PrefixProxyEditorField =
   | 'priority'
   | 'excludedModelsText'
   | 'disableCooling'
+  | 'relayMode'
+  | 'denoProxyHost'
   | 'websockets'
   | 'note';
 
@@ -40,6 +46,8 @@ export type PrefixProxyEditorState = {
   priority: string;
   excludedModelsText: string;
   disableCooling: string;
+  relayMode: CodexRelayMode;
+  denoProxyHost: string;
   websockets: boolean;
   note: string;
   noteTouched: boolean;
@@ -66,7 +74,7 @@ export type UseAuthFilesPrefixProxyEditorResult = {
 
 const buildPrefixProxyUpdatedText = (editor: PrefixProxyEditorState | null): string => {
   if (!editor?.json) return editor?.rawText ?? '';
-  const next: Record<string, unknown> = { ...editor.json };
+  let next: Record<string, unknown> = { ...editor.json };
   if ('prefix' in next || editor.prefix.trim()) {
     next.prefix = editor.prefix;
   }
@@ -104,9 +112,12 @@ const buildPrefixProxyUpdatedText = (editor: PrefixProxyEditorState | null): str
     }
   }
 
-  return JSON.stringify(
-    editor.isCodexFile ? applyCodexAuthFileWebsockets(next, editor.websockets) : next
-  );
+  if (editor.isCodexFile) {
+    next = applyCodexAuthFileWebsockets(next, editor.relayMode === 'deno' ? false : editor.websockets);
+    next = applyCodexAuthFileDenoProxy(next, editor.relayMode, editor.denoProxyHost);
+  }
+
+  return JSON.stringify(next);
 };
 
 export function useAuthFilesPrefixProxyEditor(
@@ -159,6 +170,8 @@ export function useAuthFilesPrefixProxyEditor(
       priority: '',
       excludedModelsText: '',
       disableCooling: '',
+      relayMode: 'direct',
+      denoProxyHost: '',
       websockets: false,
       note: '',
       noteTouched: false,
@@ -199,11 +212,15 @@ export function useAuthFilesPrefixProxyEditor(
         return;
       }
 
-      const json = { ...(parsed as Record<string, unknown>) };
+      let json = { ...(parsed as Record<string, unknown>) };
       if (isCodexFile) {
-        const normalizedWebsockets = readCodexAuthFileWebsockets(json);
+        const denoProxyHost = readCodexAuthFileDenoProxyHost(json);
+        const relayMode = normalizeCodexRelayMode(denoProxyHost);
+        const normalizedWebsockets =
+          relayMode === 'deno' ? false : readCodexAuthFileWebsockets(json);
         delete json.websocket;
         json.websockets = normalizedWebsockets;
+        json = applyCodexAuthFileDenoProxy(json, relayMode, denoProxyHost);
       }
       const originalText = JSON.stringify(json);
       const prefix = typeof json.prefix === 'string' ? json.prefix : '';
@@ -211,7 +228,10 @@ export function useAuthFilesPrefixProxyEditor(
       const priority = parsePriorityValue(json.priority);
       const excludedModels = normalizeExcludedModels(json.excluded_models);
       const disableCoolingValue = parseDisableCoolingValue(json.disable_cooling);
-      const websocketsValue = readCodexAuthFileWebsockets(json);
+      const denoProxyHost = isCodexFile ? readCodexAuthFileDenoProxyHost(json) : '';
+      const relayMode = isCodexFile ? normalizeCodexRelayMode(denoProxyHost) : 'direct';
+      const websocketsValue =
+        relayMode === 'deno' ? false : readCodexAuthFileWebsockets(json);
       const note = typeof json.note === 'string' ? json.note : '';
 
       setPrefixProxyEditor((prev) => {
@@ -228,6 +248,8 @@ export function useAuthFilesPrefixProxyEditor(
           excludedModelsText: excludedModels.join('\n'),
           disableCooling:
             disableCoolingValue === undefined ? '' : disableCoolingValue ? 'true' : 'false',
+          relayMode,
+          denoProxyHost,
           websockets: websocketsValue,
           note,
           noteTouched: false,
@@ -255,6 +277,15 @@ export function useAuthFilesPrefixProxyEditor(
       if (field === 'priority') return { ...prev, priority: String(value) };
       if (field === 'excludedModelsText') return { ...prev, excludedModelsText: String(value) };
       if (field === 'disableCooling') return { ...prev, disableCooling: String(value) };
+      if (field === 'relayMode') {
+        const nextMode = String(value) === 'deno' ? 'deno' : 'direct';
+        return {
+          ...prev,
+          relayMode: nextMode,
+          websockets: nextMode === 'deno' ? false : prev.websockets,
+        };
+      }
+      if (field === 'denoProxyHost') return { ...prev, denoProxyHost: String(value) };
       if (field === 'note') return { ...prev, note: String(value), noteTouched: true };
       return { ...prev, websockets: Boolean(value) };
     });
@@ -263,6 +294,14 @@ export function useAuthFilesPrefixProxyEditor(
   const handlePrefixProxySave = async () => {
     if (!prefixProxyEditor?.json) return;
     if (!prefixProxyDirty) return;
+    if (
+      prefixProxyEditor.isCodexFile &&
+      prefixProxyEditor.relayMode === 'deno' &&
+      !prefixProxyEditor.denoProxyHost.trim()
+    ) {
+      showNotification(t('notification.codex_deno_proxy_host_required'), 'error');
+      return;
+    }
 
     const name = prefixProxyEditor.fileName;
     const payload = prefixProxyUpdatedText;

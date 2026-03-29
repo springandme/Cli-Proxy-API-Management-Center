@@ -28,6 +28,7 @@ export type AuthFileModelItem = {
 export type AuthFileIconAsset = string | { light: string; dark: string };
 
 export type QuotaProviderType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi';
+export type CodexRelayMode = 'direct' | 'deno';
 
 export const QUOTA_PROVIDER_TYPES = new Set<QuotaProviderType>([
   'antigravity',
@@ -212,6 +213,20 @@ export const parseDisableCoolingValue = (value: unknown): boolean | undefined =>
   return undefined;
 };
 
+export const CODEX_OFFICIAL_BASE_URL = 'https://chatgpt.com/backend-api/codex';
+
+export const normalizeCodexRelayMode = (denoProxyHost: unknown): CodexRelayMode =>
+  String(denoProxyHost ?? '').trim() ? 'deno' : 'direct';
+
+export const readCodexAuthFileDenoProxyHost = (value: Record<string, unknown>): string => {
+  const raw =
+    value.deno_proxy_host ??
+    value['deno_proxy_host'] ??
+    value['deno-proxy-host'] ??
+    value.denoProxyHost;
+  return typeof raw === 'string' ? raw.trim() : '';
+};
+
 export const readCodexAuthFileWebsockets = (value: Record<string, unknown>): boolean =>
   parseDisableCoolingValue(value.websockets) ?? false;
 
@@ -222,6 +237,22 @@ export const applyCodexAuthFileWebsockets = (
   const next = { ...value };
   delete next.websocket;
   next.websockets = websockets;
+  return next;
+};
+
+export const applyCodexAuthFileDenoProxy = (
+  value: Record<string, unknown>,
+  relayMode: CodexRelayMode,
+  denoProxyHost: string
+): Record<string, unknown> => {
+  const next = { ...value };
+  delete next['deno-proxy-host'];
+  delete next.denoProxyHost;
+  if (relayMode === 'deno' && denoProxyHost.trim()) {
+    next.deno_proxy_host = denoProxyHost.trim();
+  } else {
+    delete next.deno_proxy_host;
+  }
   return next;
 };
 

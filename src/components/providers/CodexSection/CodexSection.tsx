@@ -103,6 +103,7 @@ export function CodexSection({
             const configDisabled = hasDisableAllModelsRule(item.excludedModels);
             const excludedModels = item.excludedModels ?? [];
             const statusData = statusBarCache.get(item.apiKey) || calculateStatusBarData([]);
+            const relayMode = item.denoProxyHost?.trim() ? 'deno' : 'direct';
 
             return (
               <Fragment>
@@ -127,6 +128,20 @@ export function CodexSection({
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
                     <span className={styles.fieldValue}>{item.baseUrl}</span>
+                  </div>
+                )}
+                <div className={styles.fieldRow}>
+                  <span className={styles.fieldLabel}>{t('ai_providers.codex_relay_mode_label')}:</span>
+                  <span className={styles.fieldValue}>
+                    {relayMode === 'deno'
+                      ? t('ai_providers.codex_relay_mode_deno')
+                      : t('ai_providers.codex_relay_mode_direct')}
+                  </span>
+                </div>
+                {item.denoProxyHost?.trim() && (
+                  <div className={styles.fieldRow}>
+                    <span className={styles.fieldLabel}>{t('ai_providers.codex_deno_proxy_host_label')}:</span>
+                    <span className={styles.fieldValue}>{item.denoProxyHost}</span>
                   </div>
                 )}
                 {item.proxyUrl && (

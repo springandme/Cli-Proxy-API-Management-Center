@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import type {
   PrefixProxyEditorField,
@@ -26,6 +27,10 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
   const { t } = useTranslation();
   const { disableControls, editor, updatedText, dirty, onClose, onCopyText, onSave, onChange } =
     props;
+  const relayModeOptions = [
+    { value: 'direct', label: t('ai_providers.codex_relay_mode_direct') },
+    { value: 'deno', label: t('ai_providers.codex_relay_mode_deno') },
+  ];
   const formatJsonText = (text: string) => {
     if (!text) return '';
     try {
@@ -118,6 +123,49 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                   disabled={disableControls || editor.saving || !editor.json}
                   onChange={(e) => onChange('proxyUrl', e.target.value)}
                 />
+                {editor.isCodexFile && (
+                  <>
+                    <div className="form-group">
+                      <label>{t('ai_providers.codex_relay_mode_label')}</label>
+                      <Select
+                        value={editor.relayMode}
+                        options={relayModeOptions}
+                        disabled={disableControls || editor.saving || !editor.json}
+                        ariaLabel={t('ai_providers.codex_relay_mode_label')}
+                        onChange={(value) => onChange('relayMode', value)}
+                      />
+                      <div className="hint">{t('ai_providers.codex_relay_mode_hint')}</div>
+                    </div>
+                    {editor.relayMode === 'deno' && (
+                      <Input
+                        label={t('ai_providers.codex_deno_proxy_host_label')}
+                        value={editor.denoProxyHost}
+                        hint={t('ai_providers.codex_deno_proxy_host_hint')}
+                        disabled={disableControls || editor.saving || !editor.json}
+                        onChange={(e) => onChange('denoProxyHost', e.target.value)}
+                      />
+                    )}
+                    <div className="form-group">
+                      <label>{t('ai_providers.codex_websockets_label')}</label>
+                      <ToggleSwitch
+                        checked={editor.relayMode === 'deno' ? false : Boolean(editor.websockets)}
+                        disabled={
+                          disableControls ||
+                          editor.saving ||
+                          !editor.json ||
+                          editor.relayMode === 'deno'
+                        }
+                        ariaLabel={t('ai_providers.codex_websockets_label')}
+                        onChange={(value) => onChange('websockets', value)}
+                      />
+                      <div className="hint">
+                        {editor.relayMode === 'deno'
+                          ? t('ai_providers.codex_websockets_deno_hint')
+                          : t('ai_providers.codex_websockets_hint')}
+                      </div>
+                    </div>
+                  </>
+                )}
                 <Input
                   label={t('auth_files.priority_label')}
                   value={editor.priority}
@@ -154,18 +202,6 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                   disabled={disableControls || editor.saving || !editor.json}
                   onChange={(e) => onChange('note', e.target.value)}
                 />
-                {editor.isCodexFile && (
-                  <div className="form-group">
-                    <label>{t('ai_providers.codex_websockets_label')}</label>
-                    <ToggleSwitch
-                      checked={Boolean(editor.websockets)}
-                      disabled={disableControls || editor.saving || !editor.json}
-                      ariaLabel={t('ai_providers.codex_websockets_label')}
-                      onChange={(value) => onChange('websockets', value)}
-                    />
-                    <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
-                  </div>
-                )}
               </div>
             </>
           )}
