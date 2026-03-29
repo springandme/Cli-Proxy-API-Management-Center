@@ -200,8 +200,7 @@ export function AiProvidersCodexEditPage() {
           initialRelayMode === 'deno'
             ? initialData.baseUrl?.trim() || CODEX_OFFICIAL_BASE_URL
             : initialData.baseUrl,
-        websockets:
-          initialRelayMode === 'deno' ? false : Boolean(initialData.websockets),
+        websockets: Boolean(initialData.websockets),
         denoProxyHost: initialData.denoProxyHost?.trim() || '',
         headers: headersToEntries(initialData.headers),
         modelEntries: modelsToEntries(initialData.models),
@@ -443,7 +442,7 @@ export function AiProvidersCodexEditPage() {
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
-        websockets: relayMode === 'deno' ? false : Boolean(form.websockets),
+        websockets: Boolean(form.websockets),
         denoProxyHost: relayMode === 'deno' ? denoProxyHost : undefined,
         proxyUrl: form.proxyUrl?.trim() || undefined,
         headers: buildHeaderObject(form.headers),
@@ -558,7 +557,6 @@ export function AiProvidersCodexEditPage() {
                   setForm((prev) => ({
                     ...prev,
                     baseUrl: nextMode === 'deno' ? CODEX_OFFICIAL_BASE_URL : prev.baseUrl,
-                    websockets: nextMode === 'deno' ? false : prev.websockets,
                   }));
                 }}
                 ariaLabel={t('ai_providers.codex_relay_mode_label')}
@@ -613,9 +611,9 @@ export function AiProvidersCodexEditPage() {
             <div className="form-group">
               <label>{t('ai_providers.codex_websockets_label')}</label>
               <ToggleSwitch
-                checked={relayMode === 'deno' ? false : Boolean(form.websockets)}
+                checked={Boolean(form.websockets)}
                 onChange={(value) => setForm((prev) => ({ ...prev, websockets: value }))}
-                disabled={disableControls || saving || relayMode === 'deno'}
+                disabled={disableControls || saving}
                 ariaLabel={t('ai_providers.codex_websockets_label')}
               />
               <div className="hint">

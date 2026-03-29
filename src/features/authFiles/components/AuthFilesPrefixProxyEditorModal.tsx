@@ -148,13 +148,8 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                     <div className="form-group">
                       <label>{t('ai_providers.codex_websockets_label')}</label>
                       <ToggleSwitch
-                        checked={editor.relayMode === 'deno' ? false : Boolean(editor.websockets)}
-                        disabled={
-                          disableControls ||
-                          editor.saving ||
-                          !editor.json ||
-                          editor.relayMode === 'deno'
-                        }
+                        checked={Boolean(editor.websockets)}
+                        disabled={disableControls || editor.saving || !editor.json}
                         ariaLabel={t('ai_providers.codex_websockets_label')}
                         onChange={(value) => onChange('websockets', value)}
                       />

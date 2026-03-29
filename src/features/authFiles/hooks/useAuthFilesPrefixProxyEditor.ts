@@ -113,7 +113,7 @@ const buildPrefixProxyUpdatedText = (editor: PrefixProxyEditorState | null): str
   }
 
   if (editor.isCodexFile) {
-    next = applyCodexAuthFileWebsockets(next, editor.relayMode === 'deno' ? false : editor.websockets);
+    next = applyCodexAuthFileWebsockets(next, editor.websockets);
     next = applyCodexAuthFileDenoProxy(next, editor.relayMode, editor.denoProxyHost);
   }
 
@@ -216,8 +216,7 @@ export function useAuthFilesPrefixProxyEditor(
       if (isCodexFile) {
         const denoProxyHost = readCodexAuthFileDenoProxyHost(json);
         const relayMode = normalizeCodexRelayMode(denoProxyHost);
-        const normalizedWebsockets =
-          relayMode === 'deno' ? false : readCodexAuthFileWebsockets(json);
+        const normalizedWebsockets = readCodexAuthFileWebsockets(json);
         delete json.websocket;
         json.websockets = normalizedWebsockets;
         json = applyCodexAuthFileDenoProxy(json, relayMode, denoProxyHost);
@@ -230,8 +229,7 @@ export function useAuthFilesPrefixProxyEditor(
       const disableCoolingValue = parseDisableCoolingValue(json.disable_cooling);
       const denoProxyHost = isCodexFile ? readCodexAuthFileDenoProxyHost(json) : '';
       const relayMode = isCodexFile ? normalizeCodexRelayMode(denoProxyHost) : 'direct';
-      const websocketsValue =
-        relayMode === 'deno' ? false : readCodexAuthFileWebsockets(json);
+      const websocketsValue = readCodexAuthFileWebsockets(json);
       const note = typeof json.note === 'string' ? json.note : '';
 
       setPrefixProxyEditor((prev) => {
@@ -282,7 +280,6 @@ export function useAuthFilesPrefixProxyEditor(
         return {
           ...prev,
           relayMode: nextMode,
-          websockets: nextMode === 'deno' ? false : prev.websockets,
         };
       }
       if (field === 'denoProxyHost') return { ...prev, denoProxyHost: String(value) };

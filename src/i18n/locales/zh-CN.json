@@ -273,7 +273,7 @@
     "codex_deno_base_url_hint": "Deno 中代理模式固定使用官方 Codex 上游：https://chatgpt.com/backend-api/codex",
     "codex_websockets_label": "Websockets",
     "codex_websockets_hint": "开启 Responses API 的 websocket 传输。",
-    "codex_websockets_deno_hint": "Deno 中代理模式会禁用 Codex websocket 传输，仅走 HTTP/SSE。",
+    "codex_websockets_deno_hint": "Deno 中代理模式支持 Codex websocket 转发；如果握手失败，CLIProxyAPI 会自动回退到 HTTP/SSE。",
     "codex_models_label": "自定义模型 (可选):",
     "codex_models_hint": "为空表示使用全部模型；可填写 name[, alias] 以限制或重命名模型。",
     "codex_models_add_btn": "添加模型",

@@ -273,7 +273,7 @@
     "codex_deno_base_url_hint": "Deno relay mode always uses the official Codex upstream: https://chatgpt.com/backend-api/codex",
     "codex_websockets_label": "Websockets",
     "codex_websockets_hint": "Enable Responses API websocket transport for this key.",
-    "codex_websockets_deno_hint": "Deno relay mode disables Codex websocket transport and falls back to HTTP/SSE only.",
+    "codex_websockets_deno_hint": "Deno relay mode supports Codex websocket relay; if the handshake fails, CLIProxyAPI falls back to HTTP/SSE automatically.",
     "codex_models_label": "Custom Models (Optional):",
     "codex_models_hint": "Leave empty to allow all models, or add name[, alias] entries to limit/alias them.",
     "codex_models_add_btn": "Add Model",
