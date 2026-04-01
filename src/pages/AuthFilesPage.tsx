@@ -24,6 +24,8 @@ import { IconFilterAll } from '@/components/ui/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { copyToClipboard } from '@/utils/clipboard';
+import { downloadBlob } from '@/utils/download';
+import { authFilesApi } from '@/services/api';
 import {
   MAX_CARD_PAGE_SIZE,
   MIN_CARD_PAGE_SIZE,
@@ -40,10 +42,17 @@ import {
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
+import { AuthFilesBulkMaintenanceModal } from '@/features/authFiles/components/AuthFilesBulkMaintenanceModal';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
+import {
+  buildAuthFilesBatchWorkbookBlob,
+  buildAuthFilesBatchWorkbookFilename,
+  parseAuthFilesBatchWorkbook,
+  type ParsedAuthFileBatchWorkbook,
+} from '@/features/authFiles/bulkMaintenance';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
@@ -100,10 +109,20 @@ export function AuthFilesPage() {
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkBusyAction, setBulkBusyAction] = useState<'selected' | 'filtered' | 'import' | null>(
+    null
+  );
+  const [bulkImportFileName, setBulkImportFileName] = useState('');
+  const [bulkImportPreview, setBulkImportPreview] = useState<ParsedAuthFileBatchWorkbook | null>(
+    null
+  );
+  const [bulkImportError, setBulkImportError] = useState('');
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
   const batchActionAnimationRef = useRef<AnimationPlaybackControlsWithThen | null>(null);
   const previousSelectionCountRef = useRef(0);
   const selectionCountRef = useRef(0);
+  const bulkImportInputRef = useRef<HTMLInputElement | null>(null);
 
   const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
   const {
@@ -442,6 +461,141 @@ export function AuthFilesPage() {
     batchStatusUpdating ||
     selectedHasStatusUpdating;
 
+  const resetBulkImportState = useCallback(() => {
+    setBulkImportFileName('');
+    setBulkImportPreview(null);
+    setBulkImportError('');
+  }, []);
+
+  const handleBulkExport = useCallback(
+    async (mode: 'selected' | 'filtered') => {
+      const names = mode === 'selected' ? selectedNames : sorted.map((file) => file.name);
+      if (names.length === 0) {
+        showNotification(t('auth_files.bulk_export_empty'), 'warning');
+        return;
+      }
+
+      setBulkBusyAction(mode);
+      try {
+        const result = await authFilesApi.batchExport(names);
+        const blob = buildAuthFilesBatchWorkbookBlob(result);
+        downloadBlob({
+          filename: buildAuthFilesBatchWorkbookFilename(),
+          blob,
+        });
+
+        if (result.failed.length > 0) {
+          showNotification(
+            t('auth_files.bulk_export_partial', {
+              success: result.rows.length,
+              failed: result.failed.length,
+            }),
+            'warning'
+          );
+        } else {
+          showNotification(
+            t('auth_files.bulk_export_success', {
+              count: result.rows.length,
+            }),
+            'success'
+          );
+        }
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : t('notification.download_failed');
+        showNotification(`${t('notification.download_failed')}: ${errorMessage}`, 'error');
+      } finally {
+        setBulkBusyAction(null);
+      }
+    },
+    [selectedNames, showNotification, sorted, t]
+  );
+
+  const handleBulkImportPickFile = useCallback(() => {
+    if (disableControls || bulkBusyAction !== null) return;
+    bulkImportInputRef.current?.click();
+  }, [bulkBusyAction, disableControls]);
+
+  const handleBulkImportFileChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.currentTarget.files?.[0];
+      event.currentTarget.value = '';
+      if (!file) return;
+
+      setBulkImportFileName(file.name);
+      setBulkImportPreview(null);
+      setBulkImportError('');
+
+      try {
+        const parsed = await parseAuthFilesBatchWorkbook(file);
+        setBulkImportPreview(parsed);
+        if (parsed.errors.length > 0) {
+          setBulkImportError(parsed.errors.join(' '));
+          showNotification(t('auth_files.bulk_import_parse_warning'), 'warning');
+        } else if (parsed.previewRows.some((row) => row.errors.length > 0)) {
+          showNotification(t('auth_files.bulk_import_row_warning'), 'warning');
+        } else {
+          showNotification(
+            t('auth_files.bulk_import_parse_success', {
+              count: parsed.rows.length,
+            }),
+            'success'
+          );
+        }
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : t('notification.upload_failed');
+        setBulkImportError(errorMessage);
+        showNotification(`${t('notification.upload_failed')}: ${errorMessage}`, 'error');
+      }
+    },
+    [showNotification, t]
+  );
+
+  const handleBulkImportApply = useCallback(async () => {
+    if (!bulkImportPreview || bulkImportPreview.rows.length === 0) {
+      showNotification(t('auth_files.bulk_import_empty'), 'warning');
+      return;
+    }
+
+    setBulkBusyAction('import');
+    try {
+      const result = await authFilesApi.batchImport(bulkImportPreview.rows);
+      await loadFiles();
+      await refreshKeyStats();
+
+      if (result.failed.length > 0) {
+        const details = result.failed
+          .slice(0, 5)
+          .map((item) => `${item.name}: ${item.error}`)
+          .join('; ');
+        setBulkImportError(details);
+        showNotification(
+          t('auth_files.bulk_import_partial', {
+            success: result.updated,
+            failed: result.failed.length,
+          }),
+          'warning'
+        );
+        return;
+      }
+
+      showNotification(
+        t('auth_files.bulk_import_success', {
+          count: result.updated,
+          skipped: result.skipped,
+        }),
+        'success'
+      );
+      resetBulkImportState();
+      setBulkModalOpen(false);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : t('notification.update_failed');
+      setBulkImportError(errorMessage);
+      showNotification(`${t('notification.update_failed')}: ${errorMessage}`, 'error');
+    } finally {
+      setBulkBusyAction(null);
+    }
+  }, [bulkImportPreview, loadFiles, refreshKeyStats, resetBulkImportState, showNotification, t]);
+
   const copyTextWithNotification = useCallback(
     async (text: string) => {
       const copied = await copyToClipboard(text);
@@ -657,6 +811,14 @@ export function AuthFilesPage() {
               {t('common.refresh')}
             </Button>
             <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setBulkModalOpen(true)}
+              disabled={disableControls}
+            >
+              {t('auth_files.bulk_button')}
+            </Button>
+            <Button
               size="sm"
               onClick={handleUploadClick}
               disabled={disableControls || uploading}
@@ -687,6 +849,15 @@ export function AuthFilesPage() {
               multiple
               style={{ display: 'none' }}
               onChange={handleFileChange}
+            />
+            <input
+              ref={bulkImportInputRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              style={{ display: 'none' }}
+              onChange={(event) => {
+                void handleBulkImportFileChange(event);
+              }}
             />
           </div>
         }
@@ -887,6 +1058,29 @@ export function AuthFilesPage() {
         onCopyText={copyTextWithNotification}
         onSave={handlePrefixProxySave}
         onChange={handlePrefixProxyChange}
+      />
+
+      <AuthFilesBulkMaintenanceModal
+        open={bulkModalOpen}
+        disableControls={disableControls}
+        selectedCount={selectedNames.length}
+        filteredCount={sorted.length}
+        busyAction={bulkBusyAction}
+        importFileName={bulkImportFileName}
+        importPreview={bulkImportPreview}
+        importError={bulkImportError}
+        onClose={() => setBulkModalOpen(false)}
+        onExportSelected={() => {
+          void handleBulkExport('selected');
+        }}
+        onExportFiltered={() => {
+          void handleBulkExport('filtered');
+        }}
+        onPickImportFile={handleBulkImportPickFile}
+        onImport={() => {
+          void handleBulkImportApply();
+        }}
+        onResetImport={resetBulkImportState}
       />
 
       {batchActionBarVisible && typeof document !== 'undefined'

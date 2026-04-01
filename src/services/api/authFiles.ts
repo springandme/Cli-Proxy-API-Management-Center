@@ -34,6 +34,52 @@ type AuthFileBatchDeleteResult = {
   files: string[];
   failed: AuthFileBatchFailure[];
 };
+type AuthFileBatchExportResponse = {
+  status?: string;
+  editable_columns?: unknown;
+  readonly_columns?: unknown;
+  rows?: unknown;
+  failed?: unknown;
+};
+type AuthFileBatchImportResponse = {
+  status?: string;
+  updated?: number;
+  skipped?: number;
+  files?: unknown;
+  failed?: unknown;
+};
+
+export type AuthFileBatchImportFieldAction =
+  | {
+      op: 'set';
+      value: unknown;
+    }
+  | {
+      op: 'clear';
+    };
+
+export type AuthFileBatchImportRow = {
+  name: string;
+  expected_provider?: string;
+  expected_type?: string;
+  fields: Record<string, AuthFileBatchImportFieldAction>;
+};
+
+export type AuthFileBatchExportResult = {
+  status: string;
+  editableColumns: string[];
+  readonlyColumns: string[];
+  rows: Record<string, unknown>[];
+  failed: AuthFileBatchFailure[];
+};
+
+export type AuthFileBatchImportResult = {
+  status: string;
+  updated: number;
+  skipped: number;
+  files: string[];
+  failed: AuthFileBatchFailure[];
+};
 
 export const AUTH_FILE_INVALID_JSON_OBJECT_ERROR = 'AUTH_FILE_INVALID_JSON_OBJECT';
 
@@ -78,6 +124,26 @@ const normalizeBatchFailures = (value: unknown): AuthFileBatchFailure[] => {
 
     if (!name && !error) return result;
     result.push({ name, error: error || 'Unknown error' });
+    return result;
+  }, []);
+};
+
+const normalizeBatchColumns = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .map((item) => String(item ?? '').trim())
+        .filter(Boolean)
+    )
+  );
+};
+
+const normalizeBatchRows = (value: unknown): Record<string, unknown>[] => {
+  if (!Array.isArray(value)) return [];
+  return value.reduce<Record<string, unknown>[]>((result, entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return result;
+    result.push({ ...(entry as Record<string, unknown>) });
     return result;
   }, []);
 };
@@ -396,6 +462,32 @@ const OAUTH_MODEL_ALIAS_ENDPOINT = '/oauth-model-alias';
 
 export const authFilesApi = {
   list: async () => dedupeAuthFilesResponse(await apiClient.get<AuthFilesResponse>('/auth-files')),
+
+  batchExport: async (names: string[]): Promise<AuthFileBatchExportResult> => {
+    const payload = await apiClient.post<AuthFileBatchExportResponse>('/auth-files/batch-export', {
+      names: normalizeRequestedAuthFileNames(names),
+    });
+    return {
+      status: typeof payload?.status === 'string' ? payload.status : 'ok',
+      editableColumns: normalizeBatchColumns(payload?.editable_columns),
+      readonlyColumns: normalizeBatchColumns(payload?.readonly_columns),
+      rows: normalizeBatchRows(payload?.rows),
+      failed: normalizeBatchFailures(payload?.failed),
+    };
+  },
+
+  batchImport: async (rows: AuthFileBatchImportRow[]): Promise<AuthFileBatchImportResult> => {
+    const payload = await apiClient.post<AuthFileBatchImportResponse>('/auth-files/batch-import', {
+      rows,
+    });
+    return {
+      status: typeof payload?.status === 'string' ? payload.status : 'ok',
+      updated: typeof payload?.updated === 'number' ? payload.updated : 0,
+      skipped: typeof payload?.skipped === 'number' ? payload.skipped : 0,
+      files: normalizeBatchFileNames(payload?.files),
+      failed: normalizeBatchFailures(payload?.failed),
+    };
+  },
 
   setStatus: (name: string, disabled: boolean) =>
     apiClient.patch<AuthFileStatusResponse>('/auth-files/status', { name, disabled }),
