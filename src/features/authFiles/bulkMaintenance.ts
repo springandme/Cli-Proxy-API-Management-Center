@@ -10,6 +10,10 @@ export const AUTH_FILE_BATCH_README_SHEET_NAME = 'README';
 export const AUTH_FILE_BATCH_OPTIONS_SHEET_NAME = 'options';
 export const AUTH_FILE_BATCH_INFO_PREFIX = 'info_';
 export const AUTH_FILE_BATCH_REQUIRED_COLUMN = 'name';
+const AUTH_FILE_BATCH_PRIORITY_COLUMNS = [
+  AUTH_FILE_BATCH_REQUIRED_COLUMN,
+  'info_plan_type',
+] as const;
 
 const AUTH_FILE_BATCH_FONT_NAME = 'Consolas';
 const AUTH_FILE_BATCH_HEADER_FILL = 'FF8DB4E2';
@@ -128,11 +132,7 @@ export const buildAuthFilesBatchWorkbookBlob = async (
   const editableColumns = payload.editableColumns.filter(
     (column) => column !== AUTH_FILE_BATCH_REQUIRED_COLUMN
   );
-  const columns = [
-    AUTH_FILE_BATCH_REQUIRED_COLUMN,
-    ...editableColumns,
-    ...payload.readonlyColumns.filter((column) => column !== AUTH_FILE_BATCH_REQUIRED_COLUMN),
-  ];
+  const columns = orderWorkbookColumns(editableColumns, payload.readonlyColumns);
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'CLI Proxy API Management Center';
@@ -406,6 +406,40 @@ function buildAuthFilesSheet(
       right: { style: 'thin', color: { argb: 'FFD9E4F5' } },
     };
   });
+
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) {
+      return;
+    }
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.font = {
+        name: AUTH_FILE_BATCH_FONT_NAME,
+        size: 11,
+      };
+      cell.alignment = {
+        vertical: 'middle',
+        wrapText: true,
+      };
+    });
+  });
+}
+
+function orderWorkbookColumns(editableColumns: string[], readonlyColumns: string[]): string[] {
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const push = (column: string) => {
+    if (!column || seen.has(column)) {
+      return;
+    }
+    seen.add(column);
+    ordered.push(column);
+  };
+
+  AUTH_FILE_BATCH_PRIORITY_COLUMNS.forEach((column) => push(column));
+  editableColumns.forEach((column) => push(column));
+  readonlyColumns.forEach((column) => push(column));
+
+  return ordered;
 }
 
 function buildOptionsSheet(worksheet: ExcelJS.Worksheet) {
