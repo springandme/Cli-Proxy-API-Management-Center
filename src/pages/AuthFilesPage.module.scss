@@ -2035,6 +2035,96 @@
   word-break: break-all;
 }
 
+.bulkTaskPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+.bulkTaskHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-sm;
+
+  h4 {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+}
+
+.bulkPreviewBadgeRunning {
+  color: color-mix(in srgb, var(--primary-color) 72%, #0f172a);
+  background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 26%, transparent);
+}
+
+.bulkTaskProgressMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.bulkTaskProgressTrack {
+  position: relative;
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+}
+
+.bulkTaskProgressBar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary-color) 78%, #ffffff),
+    color-mix(in srgb, var(--primary-color) 56%, #22c55e)
+  );
+  transition: width $transition-fast;
+}
+
+.bulkTaskSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.bulkTaskCurrentFile {
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.bulkTaskFailures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--danger-color);
+  background: rgba($error-color, 0.08);
+  border: 1px solid color-mix(in srgb, var(--danger-color) 55%, transparent);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .bulkPreviewSummary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

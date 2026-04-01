@@ -48,6 +48,26 @@ type AuthFileBatchImportResponse = {
   files?: unknown;
   failed?: unknown;
 };
+type AuthFileBatchImportTaskCreateResponse = {
+  status?: unknown;
+  task_id?: unknown;
+};
+type AuthFileBatchImportTaskResponse = {
+  task_id?: unknown;
+  status?: unknown;
+  total_rows?: unknown;
+  processed_rows?: unknown;
+  updated?: unknown;
+  skipped?: unknown;
+  failed?: unknown;
+  current_file?: unknown;
+  files?: unknown;
+  failures?: unknown;
+  error?: unknown;
+  created_at?: unknown;
+  started_at?: unknown;
+  completed_at?: unknown;
+};
 
 export type AuthFileBatchImportFieldAction =
   | {
@@ -79,6 +99,25 @@ export type AuthFileBatchImportResult = {
   skipped: number;
   files: string[];
   failed: AuthFileBatchFailure[];
+};
+
+export type AuthFileBatchImportTaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export type AuthFileBatchImportTaskResult = {
+  taskId: string;
+  status: AuthFileBatchImportTaskStatus;
+  totalRows: number;
+  processedRows: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  currentFile: string;
+  files: string[];
+  failures: AuthFileBatchFailure[];
+  error: string;
+  createdAt: string;
+  startedAt: string;
+  completedAt: string;
 };
 
 export const AUTH_FILE_INVALID_JSON_OBJECT_ERROR = 'AUTH_FILE_INVALID_JSON_OBJECT';
@@ -147,6 +186,43 @@ const normalizeBatchRows = (value: unknown): Record<string, unknown>[] => {
     return result;
   }, []);
 };
+
+const normalizeStringField = (value: unknown): string =>
+  typeof value === 'string' ? value.trim() : '';
+
+const normalizeNumberField = (value: unknown): number =>
+  typeof value === 'number' && Number.isFinite(value) ? value : 0;
+
+const normalizeBatchImportTaskStatus = (value: unknown): AuthFileBatchImportTaskStatus => {
+  switch (value) {
+    case 'pending':
+    case 'running':
+    case 'completed':
+    case 'failed':
+      return value;
+    default:
+      return 'pending';
+  }
+};
+
+const normalizeBatchImportTaskResponse = (
+  payload: AuthFileBatchImportTaskResponse | undefined
+): AuthFileBatchImportTaskResult => ({
+  taskId: normalizeStringField(payload?.task_id),
+  status: normalizeBatchImportTaskStatus(payload?.status),
+  totalRows: normalizeNumberField(payload?.total_rows),
+  processedRows: normalizeNumberField(payload?.processed_rows),
+  updated: normalizeNumberField(payload?.updated),
+  skipped: normalizeNumberField(payload?.skipped),
+  failed: normalizeNumberField(payload?.failed),
+  currentFile: normalizeStringField(payload?.current_file),
+  files: normalizeBatchFileNames(payload?.files),
+  failures: normalizeBatchFailures(payload?.failures),
+  error: normalizeStringField(payload?.error),
+  createdAt: normalizeStringField(payload?.created_at),
+  startedAt: normalizeStringField(payload?.started_at),
+  completedAt: normalizeStringField(payload?.completed_at),
+});
 
 const deriveSuccessfulFileNames = (requestedNames: string[], failed: AuthFileBatchFailure[]): string[] => {
   const failedNames = new Set(
@@ -487,6 +563,25 @@ export const authFilesApi = {
       files: normalizeBatchFileNames(payload?.files),
       failed: normalizeBatchFailures(payload?.failed),
     };
+  },
+
+  createBatchImportTask: async (rows: AuthFileBatchImportRow[]): Promise<string> => {
+    const payload = await apiClient.post<AuthFileBatchImportTaskCreateResponse>(
+      '/auth-files/batch-import-tasks',
+      { rows }
+    );
+    const taskId = normalizeStringField(payload?.task_id);
+    if (!taskId) {
+      throw new Error('Batch import task id is missing.');
+    }
+    return taskId;
+  },
+
+  getBatchImportTask: async (taskId: string): Promise<AuthFileBatchImportTaskResult> => {
+    const payload = await apiClient.get<AuthFileBatchImportTaskResponse>(
+      `/auth-files/batch-import-tasks/${encodeURIComponent(taskId)}`
+    );
+    return normalizeBatchImportTaskResponse(payload);
   },
 
   setStatus: (name: string, disabled: boolean) =>

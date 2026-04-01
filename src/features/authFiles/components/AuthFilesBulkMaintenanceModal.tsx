@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import type { ParsedAuthFileBatchWorkbook } from '@/features/authFiles/bulkMaintenance';
+import type { AuthFileBatchImportTaskResult } from '@/services/api/authFiles';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 export type AuthFilesBulkMaintenanceModalProps = {
@@ -13,6 +14,7 @@ export type AuthFilesBulkMaintenanceModalProps = {
   busyAction: 'selected' | 'filtered' | 'import' | null;
   importFileName: string;
   importPreview: ParsedAuthFileBatchWorkbook | null;
+  importTask: AuthFileBatchImportTaskResult | null;
   importError: string;
   onClose: () => void;
   onExportSelected: () => void;
@@ -32,6 +34,7 @@ export function AuthFilesBulkMaintenanceModal(props: AuthFilesBulkMaintenanceMod
     busyAction,
     importFileName,
     importPreview,
+    importTask,
     importError,
     onClose,
     onExportSelected,
@@ -51,6 +54,21 @@ export function AuthFilesBulkMaintenanceModal(props: AuthFilesBulkMaintenanceMod
     Boolean(importPreview) &&
     (importPreview?.rows.length ?? 0) > 0 &&
     (importPreview?.errors.length ?? 0) === 0;
+  const progressPercent = useMemo(() => {
+    if (!importTask) {
+      return 0;
+    }
+    if (importTask.totalRows <= 0) {
+      return importTask.status === 'completed' ? 100 : 0;
+    }
+    return Math.max(
+      0,
+      Math.min(100, Math.round((importTask.processedRows / importTask.totalRows) * 100))
+    );
+  }, [importTask]);
+  const taskStatusLabel = importTask
+    ? t(`auth_files.bulk_import_status_${importTask.status}`)
+    : '';
 
   return (
     <Modal
@@ -124,7 +142,7 @@ export function AuthFilesBulkMaintenanceModal(props: AuthFilesBulkMaintenanceMod
               <Button
                 variant="ghost"
                 onClick={onResetImport}
-                disabled={!importPreview && !importFileName}
+                disabled={busyAction === 'import' || (!importPreview && !importFileName && !importTask)}
               >
                 {t('auth_files.bulk_import_reset')}
               </Button>
@@ -135,6 +153,79 @@ export function AuthFilesBulkMaintenanceModal(props: AuthFilesBulkMaintenanceMod
               </div>
             )}
             {importError && <div className={styles.errorBox}>{importError}</div>}
+            {importTask && (
+              <div className={styles.bulkTaskPanel}>
+                <div className={styles.bulkTaskHeader}>
+                  <div>
+                    <h4>{t('auth_files.bulk_import_progress_title')}</h4>
+                    <p>{t('auth_files.bulk_import_progress_hint')}</p>
+                  </div>
+                  <span
+                    className={`${styles.bulkPreviewBadge} ${
+                      importTask.status === 'failed'
+                        ? styles.bulkPreviewBadgeDanger
+                        : importTask.status === 'completed'
+                          ? styles.bulkPreviewBadgeSuccess
+                          : styles.bulkPreviewBadgeRunning
+                    }`}
+                  >
+                    {taskStatusLabel}
+                  </span>
+                </div>
+                <div className={styles.bulkTaskProgressMeta}>
+                  <span>
+                    {t('auth_files.bulk_import_progress_processed', {
+                      processed: importTask.processedRows,
+                      total: importTask.totalRows,
+                    })}
+                  </span>
+                  <span>{progressPercent}%</span>
+                </div>
+                <div className={styles.bulkTaskProgressTrack}>
+                  <div
+                    className={styles.bulkTaskProgressBar}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <div className={styles.bulkTaskSummary}>
+                  <div className={styles.bulkSummaryCard}>
+                    <span>{t('auth_files.bulk_import_progress_updated')}</span>
+                    <strong>{importTask.updated}</strong>
+                  </div>
+                  <div className={styles.bulkSummaryCard}>
+                    <span>{t('auth_files.bulk_import_progress_skipped')}</span>
+                    <strong>{importTask.skipped}</strong>
+                  </div>
+                  <div className={styles.bulkSummaryCard}>
+                    <span>{t('auth_files.bulk_import_progress_failed')}</span>
+                    <strong>{importTask.failed}</strong>
+                  </div>
+                </div>
+                {importTask.currentFile && (
+                  <div className={styles.bulkTaskCurrentFile}>
+                    {t('auth_files.bulk_import_progress_current_file', {
+                      name: importTask.currentFile,
+                    })}
+                  </div>
+                )}
+                {importTask.failures.length > 0 && (
+                  <div className={styles.bulkTaskFailures}>
+                    {importTask.failures.slice(0, 5).map((failure) => (
+                      <div key={`${failure.name}-${failure.error}`}>
+                        {failure.name}: {failure.error}
+                      </div>
+                    ))}
+                    {importTask.failures.length > 5 && (
+                      <div>
+                        {t('auth_files.bulk_import_failure_overflow', {
+                          count: importTask.failures.length - 5,
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             {importPreview && (
               <div className={styles.bulkPreviewSummary}>
                 <div className={styles.bulkSummaryCard}>

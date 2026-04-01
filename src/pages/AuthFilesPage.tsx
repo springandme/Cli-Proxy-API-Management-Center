@@ -26,6 +26,7 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { copyToClipboard } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
 import { authFilesApi } from '@/services/api';
+import type { AuthFileBatchImportTaskResult } from '@/services/api/authFiles';
 import {
   MAX_CARD_PAGE_SIZE,
   MIN_CARD_PAGE_SIZE,
@@ -117,12 +118,16 @@ export function AuthFilesPage() {
   const [bulkImportPreview, setBulkImportPreview] = useState<ParsedAuthFileBatchWorkbook | null>(
     null
   );
+  const [bulkImportTaskId, setBulkImportTaskId] = useState('');
+  const [bulkImportTask, setBulkImportTask] = useState<AuthFileBatchImportTaskResult | null>(null);
   const [bulkImportError, setBulkImportError] = useState('');
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
   const batchActionAnimationRef = useRef<AnimationPlaybackControlsWithThen | null>(null);
   const previousSelectionCountRef = useRef(0);
   const selectionCountRef = useRef(0);
   const bulkImportInputRef = useRef<HTMLInputElement | null>(null);
+  const bulkImportTaskHandledRef = useRef('');
+  const bulkImportTaskPollingRef = useRef(false);
 
   const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
   const {
@@ -363,6 +368,14 @@ export function AuthFilesPage() {
     isCurrentLayer ? 240_000 : null
   );
 
+  useInterval(
+    () => {
+      if (!bulkImportTaskId) return;
+      void pollBulkImportTask(bulkImportTaskId);
+    },
+    bulkBusyAction === 'import' && bulkImportTaskId ? 1000 : null
+  );
+
   const existingTypes = useMemo(() => {
     const types = new Set<string>(['all']);
     files.forEach((file) => {
@@ -464,8 +477,101 @@ export function AuthFilesPage() {
   const resetBulkImportState = useCallback(() => {
     setBulkImportFileName('');
     setBulkImportPreview(null);
+    setBulkImportTaskId('');
+    setBulkImportTask(null);
     setBulkImportError('');
+    bulkImportTaskHandledRef.current = '';
   }, []);
+
+  const buildBulkImportFailureMessage = useCallback(
+    (task: AuthFileBatchImportTaskResult) => {
+      const parts: string[] = [];
+      if (task.error) {
+        parts.push(task.error);
+      }
+      task.failures.slice(0, 5).forEach((item) => {
+        parts.push(`${item.name}: ${item.error}`);
+      });
+      if (task.failures.length > 5) {
+        parts.push(
+          t('auth_files.bulk_import_failure_overflow', {
+            count: task.failures.length - 5,
+          })
+        );
+      }
+      return parts.join('; ');
+    },
+    [t]
+  );
+
+  const finalizeBulkImportTask = useCallback(
+    async (task: AuthFileBatchImportTaskResult) => {
+      await loadFiles();
+      await refreshKeyStats();
+
+      if (task.status === 'failed') {
+        const message = buildBulkImportFailureMessage(task) || t('notification.update_failed');
+        setBulkImportError(message);
+        showNotification(message, 'error');
+        return;
+      }
+
+      if (task.failures.length > 0 || task.failed > 0) {
+        setBulkImportError(buildBulkImportFailureMessage(task));
+        showNotification(
+          t('auth_files.bulk_import_partial', {
+            success: task.updated,
+            failed: task.failed,
+          }),
+          'warning'
+        );
+        return;
+      }
+
+      setBulkImportError('');
+      showNotification(
+        t('auth_files.bulk_import_success', {
+          count: task.updated,
+          skipped: task.skipped,
+        }),
+        'success'
+      );
+    },
+    [buildBulkImportFailureMessage, loadFiles, refreshKeyStats, showNotification, t]
+  );
+
+  const pollBulkImportTask = useCallback(
+    async (taskId: string) => {
+      if (!taskId || bulkImportTaskPollingRef.current) {
+        return;
+      }
+
+      bulkImportTaskPollingRef.current = true;
+      try {
+        const task = await authFilesApi.getBatchImportTask(taskId);
+        setBulkImportTask(task);
+        setBulkImportError('');
+
+        if (task.status === 'pending' || task.status === 'running') {
+          return;
+        }
+
+        setBulkBusyAction(null);
+        if (bulkImportTaskHandledRef.current === task.taskId) {
+          return;
+        }
+        bulkImportTaskHandledRef.current = task.taskId;
+        await finalizeBulkImportTask(task);
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : t('auth_files.bulk_import_task_poll_failed');
+        setBulkImportError(`${t('auth_files.bulk_import_task_poll_failed')}: ${errorMessage}`);
+      } finally {
+        bulkImportTaskPollingRef.current = false;
+      }
+    },
+    [finalizeBulkImportTask, t]
+  );
 
   const handleBulkExport = useCallback(
     async (mode: 'selected' | 'filtered') => {
@@ -478,7 +584,7 @@ export function AuthFilesPage() {
       setBulkBusyAction(mode);
       try {
         const result = await authFilesApi.batchExport(names);
-        const blob = buildAuthFilesBatchWorkbookBlob(result);
+        const blob = await buildAuthFilesBatchWorkbookBlob(result);
         downloadBlob({
           filename: buildAuthFilesBatchWorkbookFilename(),
           blob,
@@ -557,44 +663,43 @@ export function AuthFilesPage() {
     }
 
     setBulkBusyAction('import');
+    setBulkImportError('');
+    setBulkImportTaskId('');
+    setBulkImportTask(null);
+    bulkImportTaskHandledRef.current = '';
     try {
-      const result = await authFilesApi.batchImport(bulkImportPreview.rows);
-      await loadFiles();
-      await refreshKeyStats();
-
-      if (result.failed.length > 0) {
-        const details = result.failed
-          .slice(0, 5)
-          .map((item) => `${item.name}: ${item.error}`)
-          .join('; ');
-        setBulkImportError(details);
-        showNotification(
-          t('auth_files.bulk_import_partial', {
-            success: result.updated,
-            failed: result.failed.length,
-          }),
-          'warning'
-        );
-        return;
-      }
-
+      const taskId = await authFilesApi.createBatchImportTask(bulkImportPreview.rows);
+      setBulkImportTaskId(taskId);
+      setBulkImportTask({
+        taskId,
+        status: 'pending',
+        totalRows: bulkImportPreview.rows.length,
+        processedRows: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+        currentFile: '',
+        files: [],
+        failures: [],
+        error: '',
+        createdAt: '',
+        startedAt: '',
+        completedAt: '',
+      });
       showNotification(
-        t('auth_files.bulk_import_success', {
-          count: result.updated,
-          skipped: result.skipped,
+        t('auth_files.bulk_import_task_created', {
+          count: bulkImportPreview.rows.length,
         }),
-        'success'
+        'info'
       );
-      resetBulkImportState();
-      setBulkModalOpen(false);
+      void pollBulkImportTask(taskId);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : t('notification.update_failed');
       setBulkImportError(errorMessage);
       showNotification(`${t('notification.update_failed')}: ${errorMessage}`, 'error');
-    } finally {
       setBulkBusyAction(null);
     }
-  }, [bulkImportPreview, loadFiles, refreshKeyStats, resetBulkImportState, showNotification, t]);
+  }, [bulkImportPreview, pollBulkImportTask, showNotification, t]);
 
   const copyTextWithNotification = useCallback(
     async (text: string) => {
@@ -1068,6 +1173,7 @@ export function AuthFilesPage() {
         busyAction={bulkBusyAction}
         importFileName={bulkImportFileName}
         importPreview={bulkImportPreview}
+        importTask={bulkImportTask}
         importError={bulkImportError}
         onClose={() => setBulkModalOpen(false)}
         onExportSelected={() => {
