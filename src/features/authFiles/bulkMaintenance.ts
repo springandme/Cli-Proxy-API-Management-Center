@@ -381,7 +381,8 @@ function buildAuthFilesSheet(
       },
       alignment: {
         vertical: 'middle',
-        wrapText: true,
+        horizontal: 'left',
+        wrapText: false,
       },
     },
   }));
@@ -411,6 +412,7 @@ function buildAuthFilesSheet(
     if (rowNumber === 1) {
       return;
     }
+    row.height = 20;
     row.eachCell({ includeEmpty: true }, (cell) => {
       cell.font = {
         name: AUTH_FILE_BATCH_FONT_NAME,
@@ -418,7 +420,8 @@ function buildAuthFilesSheet(
       };
       cell.alignment = {
         vertical: 'middle',
-        wrapText: true,
+        horizontal: 'left',
+        wrapText: false,
       };
     });
   });
