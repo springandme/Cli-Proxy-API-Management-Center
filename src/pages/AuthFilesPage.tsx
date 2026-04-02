@@ -118,6 +118,7 @@ export function AuthFilesPage() {
   const [bulkImportPreview, setBulkImportPreview] = useState<ParsedAuthFileBatchWorkbook | null>(
     null
   );
+  const [bulkImportCreateMissing, setBulkImportCreateMissing] = useState(false);
   const [bulkImportTaskId, setBulkImportTaskId] = useState('');
   const [bulkImportTask, setBulkImportTask] = useState<AuthFileBatchImportTaskResult | null>(null);
   const [bulkImportError, setBulkImportError] = useState('');
@@ -520,6 +521,7 @@ export function AuthFilesPage() {
         setBulkImportError(buildBulkImportFailureMessage(task));
         showNotification(
           t('auth_files.bulk_import_partial', {
+            created: task.created,
             success: task.updated,
             failed: task.failed,
           }),
@@ -531,6 +533,7 @@ export function AuthFilesPage() {
       setBulkImportError('');
       showNotification(
         t('auth_files.bulk_import_success', {
+          created: task.created,
           count: task.updated,
           skipped: task.skipped,
         }),
@@ -668,13 +671,16 @@ export function AuthFilesPage() {
     setBulkImportTask(null);
     bulkImportTaskHandledRef.current = '';
     try {
-      const taskId = await authFilesApi.createBatchImportTask(bulkImportPreview.rows);
+      const taskId = await authFilesApi.createBatchImportTask(bulkImportPreview.rows, {
+        createMissing: bulkImportCreateMissing,
+      });
       setBulkImportTaskId(taskId);
       setBulkImportTask({
         taskId,
         status: 'pending',
         totalRows: bulkImportPreview.rows.length,
         processedRows: 0,
+        created: 0,
         updated: 0,
         skipped: 0,
         failed: 0,
@@ -699,7 +705,7 @@ export function AuthFilesPage() {
       showNotification(`${t('notification.update_failed')}: ${errorMessage}`, 'error');
       setBulkBusyAction(null);
     }
-  }, [bulkImportPreview, pollBulkImportTask, showNotification, t]);
+  }, [bulkImportCreateMissing, bulkImportPreview, pollBulkImportTask, showNotification, t]);
 
   const copyTextWithNotification = useCallback(
     async (text: string) => {
@@ -1175,6 +1181,7 @@ export function AuthFilesPage() {
         importPreview={bulkImportPreview}
         importTask={bulkImportTask}
         importError={bulkImportError}
+        importCreateMissing={bulkImportCreateMissing}
         onClose={() => setBulkModalOpen(false)}
         onExportSelected={() => {
           void handleBulkExport('selected');
@@ -1183,6 +1190,7 @@ export function AuthFilesPage() {
           void handleBulkExport('filtered');
         }}
         onPickImportFile={handleBulkImportPickFile}
+        onImportCreateMissingChange={setBulkImportCreateMissing}
         onImport={() => {
           void handleBulkImportApply();
         }}

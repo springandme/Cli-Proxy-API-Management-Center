@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import type { ParsedAuthFileBatchWorkbook } from '@/features/authFiles/bulkMaintenance';
 import type { AuthFileBatchImportTaskResult } from '@/services/api/authFiles';
 import styles from '@/pages/AuthFilesPage.module.scss';
@@ -16,10 +17,12 @@ export type AuthFilesBulkMaintenanceModalProps = {
   importPreview: ParsedAuthFileBatchWorkbook | null;
   importTask: AuthFileBatchImportTaskResult | null;
   importError: string;
+  importCreateMissing: boolean;
   onClose: () => void;
   onExportSelected: () => void;
   onExportFiltered: () => void;
   onPickImportFile: () => void;
+  onImportCreateMissingChange: (checked: boolean) => void;
   onImport: () => void;
   onResetImport: () => void;
 };
@@ -36,10 +39,12 @@ export function AuthFilesBulkMaintenanceModal(props: AuthFilesBulkMaintenanceMod
     importPreview,
     importTask,
     importError,
+    importCreateMissing,
     onClose,
     onExportSelected,
     onExportFiltered,
     onPickImportFile,
+    onImportCreateMissingChange,
     onImport,
     onResetImport,
   } = props;
@@ -147,6 +152,25 @@ export function AuthFilesBulkMaintenanceModal(props: AuthFilesBulkMaintenanceMod
                 {t('auth_files.bulk_import_reset')}
               </Button>
             </div>
+            <div className={styles.bulkTaskSummary}>
+              <div className={styles.bulkSummaryCard}>
+                <span>{t('auth_files.bulk_import_create_missing_title')}</span>
+                <strong>
+                  {importCreateMissing
+                    ? t('auth_files.bulk_import_create_missing_enabled')
+                    : t('auth_files.bulk_import_create_missing_disabled')}
+                </strong>
+              </div>
+              <div className={styles.bulkSummaryCard}>
+                <span>{t('auth_files.bulk_import_create_missing_hint')}</span>
+                <ToggleSwitch
+                  checked={importCreateMissing}
+                  onChange={onImportCreateMissingChange}
+                  disabled={disableControls || busyAction !== null}
+                  ariaLabel={t('auth_files.bulk_import_create_missing_title')}
+                />
+              </div>
+            </div>
             {importFileName && (
               <div className={styles.bulkFileName}>
                 {t('auth_files.bulk_import_file_name', { name: importFileName })}
@@ -188,6 +212,10 @@ export function AuthFilesBulkMaintenanceModal(props: AuthFilesBulkMaintenanceMod
                   />
                 </div>
                 <div className={styles.bulkTaskSummary}>
+                  <div className={styles.bulkSummaryCard}>
+                    <span>{t('auth_files.bulk_import_progress_created')}</span>
+                    <strong>{importTask.created}</strong>
+                  </div>
                   <div className={styles.bulkSummaryCard}>
                     <span>{t('auth_files.bulk_import_progress_updated')}</span>
                     <strong>{importTask.updated}</strong>

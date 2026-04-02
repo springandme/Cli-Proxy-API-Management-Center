@@ -302,6 +302,7 @@ function buildReadmeSheet(
     ['4. 所有 info_ 前缀列仅用于辅助识别，导入时会自动忽略。'],
     ['5. 数组和对象建议填写合法 JSON；excluded_models 同时支持逗号 / 换行分隔。'],
     ['6. 布尔字段支持 true / false，并提供 Excel 下拉选项。'],
+    ['7. 若前端导入时开启“恢复缺失项”，系统导出的工作簿可直接用于补回已删除 auth-file。'],
     [''],
     ['字段对照 / Field Guide'],
     ['显示列', '内部 key', '是否导入', '说明'],

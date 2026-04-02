@@ -43,6 +43,7 @@ type AuthFileBatchExportResponse = {
 };
 type AuthFileBatchImportResponse = {
   status?: string;
+  created?: number;
   updated?: number;
   skipped?: number;
   files?: unknown;
@@ -57,6 +58,7 @@ type AuthFileBatchImportTaskResponse = {
   status?: unknown;
   total_rows?: unknown;
   processed_rows?: unknown;
+  created?: unknown;
   updated?: unknown;
   skipped?: unknown;
   failed?: unknown;
@@ -95,6 +97,7 @@ export type AuthFileBatchExportResult = {
 
 export type AuthFileBatchImportResult = {
   status: string;
+  created: number;
   updated: number;
   skipped: number;
   files: string[];
@@ -108,6 +111,7 @@ export type AuthFileBatchImportTaskResult = {
   status: AuthFileBatchImportTaskStatus;
   totalRows: number;
   processedRows: number;
+  created: number;
   updated: number;
   skipped: number;
   failed: number;
@@ -212,6 +216,7 @@ const normalizeBatchImportTaskResponse = (
   status: normalizeBatchImportTaskStatus(payload?.status),
   totalRows: normalizeNumberField(payload?.total_rows),
   processedRows: normalizeNumberField(payload?.processed_rows),
+  created: normalizeNumberField(payload?.created),
   updated: normalizeNumberField(payload?.updated),
   skipped: normalizeNumberField(payload?.skipped),
   failed: normalizeNumberField(payload?.failed),
@@ -552,12 +557,17 @@ export const authFilesApi = {
     };
   },
 
-  batchImport: async (rows: AuthFileBatchImportRow[]): Promise<AuthFileBatchImportResult> => {
+  batchImport: async (
+    rows: AuthFileBatchImportRow[],
+    options?: { createMissing?: boolean }
+  ): Promise<AuthFileBatchImportResult> => {
     const payload = await apiClient.post<AuthFileBatchImportResponse>('/auth-files/batch-import', {
       rows,
+      create_missing: options?.createMissing === true,
     });
     return {
       status: typeof payload?.status === 'string' ? payload.status : 'ok',
+      created: typeof payload?.created === 'number' ? payload.created : 0,
       updated: typeof payload?.updated === 'number' ? payload.updated : 0,
       skipped: typeof payload?.skipped === 'number' ? payload.skipped : 0,
       files: normalizeBatchFileNames(payload?.files),
@@ -565,10 +575,16 @@ export const authFilesApi = {
     };
   },
 
-  createBatchImportTask: async (rows: AuthFileBatchImportRow[]): Promise<string> => {
+  createBatchImportTask: async (
+    rows: AuthFileBatchImportRow[],
+    options?: { createMissing?: boolean }
+  ): Promise<string> => {
     const payload = await apiClient.post<AuthFileBatchImportTaskCreateResponse>(
       '/auth-files/batch-import-tasks',
-      { rows }
+      {
+        rows,
+        create_missing: options?.createMissing === true,
+      }
     );
     const taskId = normalizeStringField(payload?.task_id);
     if (!taskId) {
