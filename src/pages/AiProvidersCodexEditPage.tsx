@@ -17,6 +17,7 @@ import { modelsApi, providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { ProviderKeyConfig } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
+import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
 import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
 import type { ProviderFormState } from '@/components/providers';
@@ -68,23 +69,37 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
     return acc;
   }, []);
 
-const buildCodexSignature = (form: ProviderFormState, relayMode: CodexRelayMode) =>
-  JSON.stringify({
-    apiKey: String(form.apiKey ?? '').trim(),
-    priority:
-      form.priority !== undefined && Number.isFinite(form.priority)
-        ? Math.trunc(form.priority)
-        : null,
-    relayMode,
-    prefix: String(form.prefix ?? '').trim(),
-    baseUrl: String(form.baseUrl ?? '').trim(),
-    denoProxyHost: String(form.denoProxyHost ?? '').trim(),
-    websockets: Boolean(form.websockets),
-    proxyUrl: String(form.proxyUrl ?? '').trim(),
-    headers: normalizeHeaderEntries(form.headers),
-    models: normalizeModelEntries(form.modelEntries),
-    excludedModels: parseExcludedModels(form.excludedText ?? ''),
-  });
+type CodexFormBaseline = {
+  apiKey: string;
+  priority: number | null;
+  relayMode: CodexRelayMode;
+  prefix: string;
+  baseUrl: string;
+  denoProxyHost: string;
+  websockets: boolean;
+  proxyUrl: string;
+  headers: ReturnType<typeof normalizeHeaderEntries>;
+  models: ReturnType<typeof normalizeModelEntries>;
+  excludedModels: string[];
+};
+
+const buildCodexBaseline = (
+  form: ProviderFormState,
+  relayMode: CodexRelayMode
+): CodexFormBaseline => ({
+  apiKey: String(form.apiKey ?? '').trim(),
+  priority:
+    form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+  relayMode,
+  prefix: String(form.prefix ?? '').trim(),
+  baseUrl: String(form.baseUrl ?? '').trim(),
+  denoProxyHost: String(form.denoProxyHost ?? '').trim(),
+  websockets: Boolean(form.websockets),
+  proxyUrl: String(form.proxyUrl ?? '').trim(),
+  headers: normalizeHeaderEntries(form.headers),
+  models: normalizeModelEntries(form.modelEntries),
+  excludedModels: parseExcludedModels(form.excludedText ?? ''),
+});
 
 export function AiProvidersCodexEditPage() {
   const { t } = useTranslation();
@@ -106,9 +121,7 @@ export function AiProvidersCodexEditPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState<ProviderFormState>(() => buildEmptyForm());
   const [relayMode, setRelayMode] = useState<CodexRelayMode>('direct');
-  const [baselineSignature, setBaselineSignature] = useState(() =>
-    buildCodexSignature(buildEmptyForm(), 'direct')
-  );
+  const [baseline, setBaseline] = useState(() => buildCodexBaseline(buildEmptyForm(), 'direct'));
 
   const [modelDiscoveryOpen, setModelDiscoveryOpen] = useState(false);
   const [modelDiscoveryEndpoint, setModelDiscoveryEndpoint] = useState('');
@@ -208,17 +221,53 @@ export function AiProvidersCodexEditPage() {
       };
       setRelayMode(initialRelayMode);
       setForm(nextForm);
-      setBaselineSignature(buildCodexSignature(nextForm, initialRelayMode));
+      setBaseline(buildCodexBaseline(nextForm, initialRelayMode));
       return;
     }
     const nextForm = buildEmptyForm();
     setRelayMode('direct');
     setForm(nextForm);
-    setBaselineSignature(buildCodexSignature(nextForm, 'direct'));
+    setBaseline(buildCodexBaseline(nextForm, 'direct'));
   }, [initialData, loading]);
 
-  const currentSignature = useMemo(() => buildCodexSignature(form, relayMode), [form, relayMode]);
-  const isDirty = baselineSignature !== currentSignature;
+  const normalizedHeaders = useMemo(() => normalizeHeaderEntries(form.headers), [form.headers]);
+  const normalizedModels = useMemo(
+    () => normalizeModelEntries(form.modelEntries),
+    [form.modelEntries]
+  );
+  const normalizedExcludedModels = useMemo(
+    () => parseExcludedModels(form.excludedText ?? ''),
+    [form.excludedText]
+  );
+  const normalizedPriority = useMemo(() => {
+    return form.priority !== undefined && Number.isFinite(form.priority)
+      ? Math.trunc(form.priority)
+      : null;
+  }, [form.priority]);
+  const isHeadersDirty = useMemo(
+    () => !areKeyValueEntriesEqual(baseline.headers, normalizedHeaders),
+    [baseline.headers, normalizedHeaders]
+  );
+  const isModelsDirty = useMemo(
+    () => !areModelEntriesEqual(baseline.models, normalizedModels),
+    [baseline.models, normalizedModels]
+  );
+  const isExcludedModelsDirty = useMemo(
+    () => !areStringArraysEqual(baseline.excludedModels, normalizedExcludedModels),
+    [baseline.excludedModels, normalizedExcludedModels]
+  );
+  const isDirty =
+    baseline.apiKey !== form.apiKey.trim() ||
+    baseline.priority !== normalizedPriority ||
+    baseline.relayMode !== relayMode ||
+    baseline.prefix !== String(form.prefix ?? '').trim() ||
+    baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
+    baseline.denoProxyHost !== String(form.denoProxyHost ?? '').trim() ||
+    baseline.websockets !== Boolean(form.websockets) ||
+    baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
+    isHeadersDirty ||
+    isModelsDirty ||
+    isExcludedModelsDirty;
   const canGuard = !loading && !saving && !invalidIndexParam && !invalidIndex;
   const effectiveBaseUrl =
     relayMode === 'deno' ? CODEX_OFFICIAL_BASE_URL : String(form.baseUrl ?? '').trim();
@@ -465,7 +514,7 @@ export function AiProvidersCodexEditPage() {
         'success'
       );
       allowNextNavigation();
-      setBaselineSignature(buildCodexSignature(form, relayMode));
+      setBaseline(buildCodexBaseline(form, relayMode));
       handleBack();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
