@@ -714,7 +714,12 @@
     "picker_in_use_many": "Управляемый хост · {{count}} использований",
     "picker_in_use_other": "Управляемый хост · {{count}} использования",
     "picker_unused": "Управляемый хост · не используется",
-    "picker_custom": "Пользовательский хост, сейчас не зарегистрирован в управляемом пуле"
+    "picker_custom": "Пользовательский хост, сейчас не зарегистрирован в управляемом пуле",
+    "picker_sort_label": "Сортировка",
+    "picker_sort_usage_desc": "По использованию: от большего к меньшему",
+    "picker_sort_usage_asc": "По использованию: от меньшего к большему",
+    "picker_sort_host_asc": "Host A-Z",
+    "picker_sort_host_desc": "Host Z-A"
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",

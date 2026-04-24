@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { denoProxiesApi } from '@/services/api/denoProxies';
 import { useNotificationStore } from '@/stores';
 import type { DenoProxyListResponse } from '@/types';
@@ -20,6 +21,8 @@ type DenoProxyPickerFieldProps = {
   hint?: string;
 };
 
+type DenoProxySortMode = 'usage-desc' | 'usage-asc' | 'host-asc' | 'host-desc';
+
 export function DenoProxyPickerField({
   value,
   onChange,
@@ -33,6 +36,7 @@ export function DenoProxyPickerField({
   const [data, setData] = useState<DenoProxyListResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [sortMode, setSortMode] = useState<DenoProxySortMode>('usage-desc');
 
   useEffect(() => {
     let cancelled = false;
@@ -57,16 +61,61 @@ export function DenoProxyPickerField({
     };
   }, []);
 
+  const sortOptions = useMemo(
+    () => [
+      {
+        value: 'usage-desc',
+        label: t('deno_proxies.picker_sort_usage_desc'),
+      },
+      {
+        value: 'usage-asc',
+        label: t('deno_proxies.picker_sort_usage_asc'),
+      },
+      {
+        value: 'host-asc',
+        label: t('deno_proxies.picker_sort_host_asc'),
+      },
+      {
+        value: 'host-desc',
+        label: t('deno_proxies.picker_sort_host_desc'),
+      },
+    ],
+    [t]
+  );
+
+  const sortedItems = useMemo(() => {
+    const items = [...(data?.items ?? [])];
+    items.sort((left, right) => {
+      if (sortMode === 'usage-desc') {
+        if (right.usage_count !== left.usage_count) {
+          return right.usage_count - left.usage_count;
+        }
+        return left.host.localeCompare(right.host);
+      }
+      if (sortMode === 'usage-asc') {
+        if (left.usage_count !== right.usage_count) {
+          return left.usage_count - right.usage_count;
+        }
+        return left.host.localeCompare(right.host);
+      }
+      if (sortMode === 'host-desc') {
+        return right.host.localeCompare(left.host);
+      }
+      return left.host.localeCompare(right.host);
+    });
+    return items;
+  }, [data?.items, sortMode]);
+
   const options = useMemo(
     () =>
-      (data?.items ?? []).map((item) => ({
+      sortedItems.map((item) => ({
         value: item.host,
         label:
           item.usage_count > 0
             ? t('deno_proxies.option_in_use', { count: item.usage_count })
             : t('deno_proxies.option_unused'),
       })),
-    [data?.items, t]
+    [sortedItems, t]
   );
 
   const normalizedValue = normalizeDenoProxyHostForMatch(value);
@@ -108,6 +157,18 @@ export function DenoProxyPickerField({
         hint={hint}
         placeholder={t('deno_proxies.host_placeholder')}
       />
+      <div className={styles.sortRow}>
+        <div className={styles.sortControl}>
+          <label>{t('deno_proxies.picker_sort_label')}</label>
+          <Select
+            value={sortMode}
+            options={sortOptions}
+            onChange={(value) => setSortMode(value as DenoProxySortMode)}
+            ariaLabel={t('deno_proxies.picker_sort_label')}
+            fullWidth
+          />
+        </div>
+      </div>
       <div className={styles.actions}>
         <Button
           variant="secondary"

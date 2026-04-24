@@ -714,7 +714,12 @@
     "picker_in_use_one": "已登记 Host · 使用中 {{count}} 处",
     "picker_in_use_other": "已登记 Host · 使用中 {{count}} 处",
     "picker_unused": "已登记 Host · 暂未使用",
-    "picker_custom": "这是一个自定义 Host，当前不在代理池目录中"
+    "picker_custom": "这是一个自定义 Host，当前不在代理池目录中",
+    "picker_sort_label": "排序",
+    "picker_sort_usage_desc": "使用次数从高到低",
+    "picker_sort_usage_asc": "使用次数从低到高",
+    "picker_sort_host_asc": "Host A-Z",
+    "picker_sort_host_desc": "Host Z-A"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",

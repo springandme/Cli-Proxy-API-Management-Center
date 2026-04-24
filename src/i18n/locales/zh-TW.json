@@ -648,7 +648,12 @@
     "picker_in_use_one": "已登記 Host · 使用中 {{count}} 處",
     "picker_in_use_other": "已登記 Host · 使用中 {{count}} 處",
     "picker_unused": "已登記 Host · 尚未使用",
-    "picker_custom": "這是一個自訂 Host，目前不在代理池目錄中"
+    "picker_custom": "這是一個自訂 Host，目前不在代理池目錄中",
+    "picker_sort_label": "排序",
+    "picker_sort_usage_desc": "使用次數由高到低",
+    "picker_sort_usage_asc": "使用次數由低到高",
+    "picker_sort_host_asc": "Host A-Z",
+    "picker_sort_host_desc": "Host Z-A"
   },
   "antigravity_quota": {
     "title": "Antigravity 配額",

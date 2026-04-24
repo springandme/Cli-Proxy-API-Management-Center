@@ -714,7 +714,12 @@
     "picker_in_use_one": "Managed host · {{count}} usage",
     "picker_in_use_other": "Managed host · {{count}} usages",
     "picker_unused": "Managed host · unused",
-    "picker_custom": "Custom host, not currently registered in the managed pool"
+    "picker_custom": "Custom host, not currently registered in the managed pool",
+    "picker_sort_label": "Sort",
+    "picker_sort_usage_desc": "Usage high to low",
+    "picker_sort_usage_asc": "Usage low to high",
+    "picker_sort_host_asc": "Host A-Z",
+    "picker_sort_host_desc": "Host Z-A"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",
