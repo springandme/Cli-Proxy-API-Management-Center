@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { DenoProxyPickerField } from '@/features/denoProxies/components/DenoProxyPickerField';
 import type {
   PrefixProxyEditorField,
   PrefixProxyEditorFieldValue,
@@ -143,12 +144,12 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                       <div className="hint">{t('ai_providers.codex_relay_mode_hint')}</div>
                     </div>
                     {editor.relayMode === 'deno' && (
-                      <Input
+                      <DenoProxyPickerField
                         label={t('ai_providers.codex_deno_proxy_host_label')}
                         value={editor.denoProxyHost}
                         hint={t('ai_providers.codex_deno_proxy_host_hint')}
                         disabled={disableControls || editor.saving || !editor.json}
-                        onChange={(e) => onChange('denoProxyHost', e.target.value)}
+                        onChange={(value) => onChange('denoProxyHost', value)}
                       />
                     )}
                     <div className="form-group">

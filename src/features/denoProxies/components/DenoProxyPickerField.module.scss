@@ -1,0 +1,12 @@
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.meta {
+  margin-top: 8px;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}

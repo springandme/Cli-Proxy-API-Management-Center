@@ -457,6 +457,7 @@ export function MainLayout() {
       if (normalizedPath.startsWith('/auth-files/')) {
         if (normalizedPath.startsWith('/auth-files/oauth-excluded')) return authFilesIndex + 0.1;
         if (normalizedPath.startsWith('/auth-files/oauth-model-alias')) return authFilesIndex + 0.2;
+        if (normalizedPath.startsWith('/auth-files/deno-proxies')) return authFilesIndex + 0.3;
         return authFilesIndex + 0.05;
       }
     }

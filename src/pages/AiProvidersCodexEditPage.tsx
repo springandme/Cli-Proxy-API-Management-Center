@@ -13,11 +13,16 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
+import { DenoProxyPickerField } from '@/features/denoProxies/components/DenoProxyPickerField';
 import { modelsApi, providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { ProviderKeyConfig } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
-import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
+import {
+  areKeyValueEntriesEqual,
+  areModelEntriesEqual,
+  areStringArraysEqual,
+} from '@/utils/compare';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
 import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
 import type { ProviderFormState } from '@/components/providers';
@@ -89,7 +94,9 @@ const buildCodexBaseline = (
 ): CodexFormBaseline => ({
   apiKey: String(form.apiKey ?? '').trim(),
   priority:
-    form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+    form.priority !== undefined && Number.isFinite(form.priority)
+      ? Math.trunc(form.priority)
+      : null,
   relayMode,
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
@@ -206,7 +213,9 @@ export function AiProvidersCodexEditPage() {
     if (loading) return;
 
     if (initialData) {
-      const initialRelayMode: CodexRelayMode = initialData.denoProxyHost?.trim() ? 'deno' : 'direct';
+      const initialRelayMode: CodexRelayMode = initialData.denoProxyHost?.trim()
+        ? 'deno'
+        : 'direct';
       const nextForm: ProviderFormState = {
         ...initialData,
         baseUrl:
@@ -416,7 +425,14 @@ export function AiProvidersCodexEditPage() {
     autoFetchSignatureRef.current = signature;
 
     void fetchCodexModelDiscovery();
-  }, [effectiveBaseUrl, fetchCodexModelDiscovery, form.apiKey, form.headers, modelDiscoveryOpen, relayMode]);
+  }, [
+    effectiveBaseUrl,
+    fetchCodexModelDiscovery,
+    form.apiKey,
+    form.headers,
+    modelDiscoveryOpen,
+    relayMode,
+  ]);
 
   useEffect(() => {
     const availableNames = new Set(discoveredModels.map((model) => model.name));
@@ -641,18 +657,14 @@ export function AiProvidersCodexEditPage() {
               label={t('ai_providers.codex_add_modal_url_label')}
               value={effectiveBaseUrl}
               onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              hint={
-                relayMode === 'deno' ? t('ai_providers.codex_deno_base_url_hint') : undefined
-              }
+              hint={relayMode === 'deno' ? t('ai_providers.codex_deno_base_url_hint') : undefined}
               disabled={disableControls || saving || relayMode === 'deno'}
             />
             {relayMode === 'deno' && (
-              <Input
+              <DenoProxyPickerField
                 label={t('ai_providers.codex_deno_proxy_host_label')}
                 value={form.denoProxyHost ?? ''}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, denoProxyHost: e.target.value }))
-                }
+                onChange={(nextValue) => setForm((prev) => ({ ...prev, denoProxyHost: nextValue }))}
                 hint={t('ai_providers.codex_deno_proxy_host_hint')}
                 disabled={disableControls || saving}
               />

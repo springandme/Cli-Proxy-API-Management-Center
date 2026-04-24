@@ -78,8 +78,7 @@ const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
 
-const escapeWildcardSearchSegment = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeWildcardSearchSegment = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const buildWildcardSearch = (value: string): RegExp | null => {
   if (!value.includes('*')) return null;
@@ -226,10 +225,7 @@ export function AuthFilesPage() {
       if (typeof persisted.problemOnly === 'boolean') {
         setProblemOnly(persisted.problemOnly);
       }
-      if (
-        typeof persistedCompactMode !== 'boolean' &&
-        typeof persisted.compactMode === 'boolean'
-      ) {
+      if (typeof persistedCompactMode !== 'boolean' && typeof persisted.compactMode === 'boolean') {
         setCompactMode(persisted.compactMode);
       }
       if (typeof persisted.search === 'string') {
@@ -245,11 +241,11 @@ export function AuthFilesPage() {
       const regularPageSize =
         typeof persisted.regularPageSize === 'number' && Number.isFinite(persisted.regularPageSize)
           ? clampCardPageSize(persisted.regularPageSize)
-          : legacyPageSize ?? DEFAULT_REGULAR_PAGE_SIZE;
+          : (legacyPageSize ?? DEFAULT_REGULAR_PAGE_SIZE);
       const compactPageSize =
         typeof persisted.compactPageSize === 'number' && Number.isFinite(persisted.compactPageSize)
           ? clampCardPageSize(persisted.compactPageSize)
-          : legacyPageSize ?? DEFAULT_COMPACT_PAGE_SIZE;
+          : (legacyPageSize ?? DEFAULT_COMPACT_PAGE_SIZE);
       setPageSizeByMode({
         regular: regularPageSize,
         compact: compactPageSize,
@@ -711,9 +707,7 @@ export function AuthFilesPage() {
     async (text: string) => {
       const copied = await copyToClipboard(text);
       showNotification(
-        copied
-          ? t('notification.link_copied', { defaultValue: 'Copied to clipboard' })
-          : t('notification.copy_failed', { defaultValue: 'Copy failed' }),
+        copied ? t('notification.link_copied') : t('notification.copy_failed'),
         copied ? 'success' : 'error'
       );
     },
@@ -749,6 +743,12 @@ export function AuthFilesPage() {
     },
     [filter, navigate]
   );
+
+  const openDenoProxiesPage = useCallback(() => {
+    navigate('/auth-files/deno-proxies', {
+      state: { fromAuthFiles: true },
+    });
+  }, [navigate]);
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
@@ -920,6 +920,9 @@ export function AuthFilesPage() {
           <div className={styles.headerActions}>
             <Button variant="secondary" size="sm" onClick={handleHeaderRefresh} disabled={loading}>
               {t('common.refresh')}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={openDenoProxiesPage}>
+              {t('deno_proxies.page_title')}
             </Button>
             <Button
               variant="secondary"
