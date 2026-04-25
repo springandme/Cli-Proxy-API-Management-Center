@@ -147,7 +147,7 @@ export function DenoProxyPickerField({
   };
 
   return (
-    <div>
+    <div className={styles.pickerField}>
       <AutocompleteInput
         label={label}
         value={value}
@@ -157,47 +157,48 @@ export function DenoProxyPickerField({
         hint={hint}
         placeholder={t('deno_proxies.host_placeholder')}
       />
-      <div className={styles.sortRow}>
-        <div className={styles.sortControl}>
-          <label>{t('deno_proxies.picker_sort_label')}</label>
+      <div className={styles.fieldToolbar}>
+        <div className={styles.fieldToolbarLeft}>
           <Select
             value={sortMode}
             options={sortOptions}
             onChange={(value) => setSortMode(value as DenoProxySortMode)}
             ariaLabel={t('deno_proxies.picker_sort_label')}
-            fullWidth
+            className={styles.sortSelect}
           />
+          {matchingItem ? (
+            <span className={styles.meta}>
+              {matchingItem.usage_count > 0
+                ? t('deno_proxies.picker_in_use', { count: matchingItem.usage_count })
+                : t('deno_proxies.picker_unused')}
+            </span>
+          ) : normalizedValue ? (
+            <span className={styles.meta}>{t('deno_proxies.picker_custom')}</span>
+          ) : null}
+        </div>
+        <div className={styles.fieldToolbarRight}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              void handleTest();
+            }}
+            disabled={disabled || testing || loading}
+            loading={testing}
+          >
+            {t('common.test')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              navigate('/auth-files/deno-proxies', { state: { fromAuthFiles: true } })
+            }
+          >
+            {t('common.manage')}
+          </Button>
         </div>
       </div>
-      <div className={styles.actions}>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            void handleTest();
-          }}
-          disabled={disabled || testing || loading}
-          loading={testing}
-        >
-          {t('common.test')}
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => navigate('/auth-files/deno-proxies', { state: { fromAuthFiles: true } })}
-        >
-          {t('common.manage')}
-        </Button>
-      </div>
-      {matchingItem ? (
-        <div className={styles.meta}>
-          {matchingItem.usage_count > 0
-            ? t('deno_proxies.picker_in_use', { count: matchingItem.usage_count })
-            : t('deno_proxies.picker_unused')}
-        </div>
-      ) : normalizedValue ? (
-        <div className={styles.meta}>{t('deno_proxies.picker_custom')}</div>
-      ) : null}
     </div>
   );
 }

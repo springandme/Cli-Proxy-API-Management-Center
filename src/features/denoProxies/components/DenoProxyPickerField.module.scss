@@ -1,20 +1,70 @@
-.sortRow {
-  margin-top: 8px;
-}
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
 
-.sortControl {
-  max-width: 240px;
-}
-
-.actions {
+.pickerField {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  flex-direction: column;
+
+  :global(.form-group) {
+    margin-bottom: 0;
+  }
+}
+
+.fieldToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
   flex-wrap: wrap;
+  padding: 6px 2px 0;
+}
+
+.fieldToolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 0;
+  flex: 1;
+}
+
+.fieldToolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sortSelect {
+  max-width: 180px;
+  min-width: 120px;
 }
 
 .meta {
-  margin-top: 8px;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+@include mobile {
+  .fieldToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-xs;
+  }
+
+  .fieldToolbarLeft {
+    flex-wrap: wrap;
+  }
+
+  .fieldToolbarRight {
+    justify-content: flex-end;
+  }
+
+  .sortSelect {
+    max-width: none;
+    flex: 1;
+  }
 }

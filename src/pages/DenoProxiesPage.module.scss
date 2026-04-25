@@ -1,7 +1,32 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
 .container {
   display: grid;
   gap: 16px;
 }
+
+// -- Bulk Add Section --
+
+.bulkBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.bulkActions {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+}
+
+// -- Proxy Pool Directory --
 
 .toolbar {
   display: grid;
@@ -12,6 +37,10 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+
+  :global(.form-group) {
+    margin-bottom: 0;
+  }
 }
 
 .searchWrap {
@@ -19,25 +48,33 @@
   flex: 1;
 }
 
-.bulkActions {
+.filterWrap {
+  min-width: 200px;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 12px;
+  flex-direction: column;
+  gap: 6px;
 }
+
+// -- Host Cards --
 
 .hostList {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .hostCard {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+  border-radius: var(--radius-lg, $radius-lg);
+  padding: 14px 16px;
   background: var(--bg-secondary);
-  display: grid;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color $transition-fast;
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
 }
 
 .hostHeader {
@@ -45,74 +82,120 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+}
+
+.hostIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
 }
 
 .hostTitle {
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 700;
   word-break: break-all;
+  line-height: 1.4;
+  color: var(--text-primary);
 }
 
 .badgeRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.78rem;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
 }
 
 .badgeManaged {
-  background: color-mix(in srgb, var(--accent-color) 16%, transparent);
-  color: var(--accent-color);
+  background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+  color: var(--primary-active);
 }
 
 .badgeWarn {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
-}
-
-.usedByList {
-  display: grid;
-  gap: 8px;
-}
-
-.usedByItem {
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: var(--bg-tertiary);
-  font-size: 0.9rem;
-}
-
-.usedByMeta {
-  margin-top: 4px;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .hostActions {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 2px;
+  flex-shrink: 0;
+  align-items: center;
 }
+
+// -- Used-by Section --
+
+.usedByList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed color-mix(in srgb, var(--border-color) 60%, transparent);
+}
+
+.usedByItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md, $radius-md);
+  background: var(--bg-tertiary);
+  font-size: 0.85rem;
+}
+
+.usedByName {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.usedByMeta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+// -- Empty State --
 
 .empty {
   padding: 20px;
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg, $radius-lg);
   color: var(--text-secondary);
 }
 
-.textarea {
-  width: 100%;
-  min-height: 120px;
-  resize: vertical;
+// -- Responsive --
+
+@include mobile {
+  .hostHeader {
+    flex-direction: column;
+  }
+
+  .hostActions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+  }
+
+  .usedByItem {
+    flex-direction: column;
+    gap: 2px;
+  }
 }

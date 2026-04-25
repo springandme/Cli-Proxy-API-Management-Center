@@ -209,18 +209,12 @@ export function DenoProxiesPage() {
       loadingLabel={t('common.loading')}
     >
       <div className={styles.container}>
-        <Card title={t('deno_proxies.bulk_title')}>
-          <div className={styles.toolbar}>
-            <div className="hint">{t('deno_proxies.bulk_hint')}</div>
-            <textarea
-              className={`input ${styles.textarea}`}
-              value={bulkInput}
-              onChange={(event) => setBulkInput(event.target.value)}
-              placeholder={t('deno_proxies.bulk_placeholder')}
-              disabled={disableControls || submitting}
-            />
+        <Card
+          title={t('deno_proxies.bulk_title')}
+          extra={
             <div className={styles.bulkActions}>
               <Button
+                size="sm"
                 onClick={() => {
                   void handleBulkAdd();
                 }}
@@ -230,13 +224,25 @@ export function DenoProxiesPage() {
                 {t('deno_proxies.bulk_submit')}
               </Button>
               <Button
-                variant="secondary"
+                variant="ghost"
+                size="sm"
                 onClick={() => setBulkInput('')}
                 disabled={disableControls || submitting || !bulkInput.trim()}
               >
                 {t('common.clear')}
               </Button>
             </div>
+          }
+        >
+          <div className={styles.bulkBody}>
+            <textarea
+              className={`input ${styles.textarea}`}
+              value={bulkInput}
+              onChange={(event) => setBulkInput(event.target.value)}
+              placeholder={t('deno_proxies.bulk_placeholder')}
+              disabled={disableControls || submitting}
+            />
+            <div className="hint">{t('deno_proxies.bulk_hint')}</div>
           </div>
         </Card>
 
@@ -252,7 +258,7 @@ export function DenoProxiesPage() {
                   placeholder={t('deno_proxies.search_placeholder')}
                 />
               </div>
-              <div style={{ minWidth: 220 }}>
+              <div className={styles.filterWrap}>
                 <label>{t('deno_proxies.filter_label')}</label>
                 <Select
                   value={filter}
@@ -275,8 +281,8 @@ export function DenoProxiesPage() {
                   className={styles.hostCard}
                 >
                   <div className={styles.hostHeader}>
-                    <div>
-                      <div className={styles.hostTitle}>{entry.item.host}</div>
+                    <div className={styles.hostIdentity}>
+                      <span className={styles.hostTitle}>{entry.item.host}</span>
                       <div className={styles.badgeRow}>
                         <span
                           className={`${styles.badge} ${entry.managed ? styles.badgeManaged : styles.badgeWarn}`}
@@ -296,7 +302,7 @@ export function DenoProxiesPage() {
                     </div>
                     <div className={styles.hostActions}>
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="sm"
                         onClick={() => {
                           void handleCopy(entry.item.host);
@@ -305,7 +311,7 @@ export function DenoProxiesPage() {
                         {t('common.copy')}
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="sm"
                         onClick={() => {
                           void handleProbe(entry.item.host);
@@ -351,12 +357,14 @@ export function DenoProxiesPage() {
                           key={`${usedBy.source}:${usedBy.id ?? usedBy.name ?? usedBy.fileName}`}
                           className={styles.usedByItem}
                         >
-                          <div>{usedBy.name || usedBy.fileName || usedBy.id || usedBy.source}</div>
-                          <div className={styles.usedByMeta}>
+                          <span className={styles.usedByName}>
+                            {usedBy.name || usedBy.fileName || usedBy.id || usedBy.source}
+                          </span>
+                          <span className={styles.usedByMeta}>
                             {[usedBy.source, usedBy.fileName, usedBy.authIndex, usedBy.baseUrl]
                               .filter(Boolean)
                               .join(' · ')}
-                          </div>
+                          </span>
                         </div>
                       ))}
                     </div>
