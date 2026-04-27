@@ -64,12 +64,12 @@ export function DenoProxyPickerField({
   const sortOptions = useMemo(
     () => [
       {
-        value: 'usage-desc',
-        label: t('deno_proxies.picker_sort_usage_desc'),
-      },
-      {
         value: 'usage-asc',
         label: t('deno_proxies.picker_sort_usage_asc'),
+      },
+      {
+        value: 'usage-desc',
+        label: t('deno_proxies.picker_sort_usage_desc'),
       },
       {
         value: 'host-asc',

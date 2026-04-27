@@ -30,9 +30,9 @@ type Translator = (key: string, options?: Record<string, unknown>) => string;
 const formatUsageSourceLabel = (source: string, t: Translator) => {
   switch (source) {
     case 'auth-file':
-      return t('deno_proxies.source_auth_file');
+      return t('deno_proxies.source_codex_auth');
     case 'runtime-auth':
-      return t('deno_proxies.source_runtime_auth');
+      return t('deno_proxies.source_codex_auth');
     case 'codex-api-key':
       return t('deno_proxies.source_codex_api_key');
     default:

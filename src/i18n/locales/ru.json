@@ -722,6 +722,7 @@
     "picker_sort_host_desc": "Host Z-A",
     "source_auth_file": "auth file",
     "source_runtime_auth": "runtime auth",
+    "source_codex_auth": "Codex auth",
     "source_codex_api_key": "Codex API key"
   },
   "antigravity_quota": {

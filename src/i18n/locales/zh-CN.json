@@ -722,6 +722,7 @@
     "picker_sort_host_desc": "Host Z-A",
     "source_auth_file": "认证文件",
     "source_runtime_auth": "运行时认证",
+    "source_codex_auth": "Codex 认证",
     "source_codex_api_key": "Codex API Key"
   },
   "antigravity_quota": {
