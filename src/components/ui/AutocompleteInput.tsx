@@ -15,6 +15,7 @@ interface AutocompleteInputProps {
   wrapperStyle?: React.CSSProperties;
   id?: string;
   rightElement?: ReactNode;
+  dropdownInFlow?: boolean;
 }
 
 export function AutocompleteInput({
@@ -30,7 +31,8 @@ export function AutocompleteInput({
   wrapperClassName = '',
   wrapperStyle,
   id,
-  rightElement
+  rightElement,
+  dropdownInFlow = false
 }: AutocompleteInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -132,10 +134,11 @@ export function AutocompleteInput({
 
         {isOpen && filteredOptions.length > 0 && !disabled && (
             <div className="autocomplete-dropdown" style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: 0,
-                right: 0,
+                position: dropdownInFlow ? 'relative' : 'absolute',
+                top: dropdownInFlow ? undefined : 'calc(100% + 4px)',
+                left: dropdownInFlow ? undefined : 0,
+                right: dropdownInFlow ? undefined : 0,
+                marginTop: dropdownInFlow ? 4 : 0,
                 zIndex: 1000,
                 backgroundColor: 'var(--bg-secondary)',
                 border: '1px solid var(--border-color)',

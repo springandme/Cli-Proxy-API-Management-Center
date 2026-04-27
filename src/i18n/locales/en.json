@@ -719,7 +719,10 @@
     "picker_sort_usage_desc": "Usage high to low",
     "picker_sort_usage_asc": "Usage low to high",
     "picker_sort_host_asc": "Host A-Z",
-    "picker_sort_host_desc": "Host Z-A"
+    "picker_sort_host_desc": "Host Z-A",
+    "source_auth_file": "auth file",
+    "source_runtime_auth": "runtime auth",
+    "source_codex_api_key": "Codex API key"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",

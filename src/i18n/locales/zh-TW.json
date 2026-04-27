@@ -653,7 +653,10 @@
     "picker_sort_usage_desc": "使用次數由高到低",
     "picker_sort_usage_asc": "使用次數由低到高",
     "picker_sort_host_asc": "Host A-Z",
-    "picker_sort_host_desc": "Host Z-A"
+    "picker_sort_host_desc": "Host Z-A",
+    "source_auth_file": "認證檔案",
+    "source_runtime_auth": "執行期認證",
+    "source_codex_api_key": "Codex API Key"
   },
   "antigravity_quota": {
     "title": "Antigravity 配額",

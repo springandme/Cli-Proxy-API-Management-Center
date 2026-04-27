@@ -36,7 +36,7 @@ export function DenoProxyPickerField({
   const [data, setData] = useState<DenoProxyListResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [sortMode, setSortMode] = useState<DenoProxySortMode>('usage-desc');
+  const [sortMode, setSortMode] = useState<DenoProxySortMode>('usage-asc');
 
   useEffect(() => {
     let cancelled = false;
@@ -156,6 +156,7 @@ export function DenoProxyPickerField({
         disabled={disabled}
         hint={hint}
         placeholder={t('deno_proxies.host_placeholder')}
+        dropdownInFlow
       />
       <div className={styles.fieldToolbar}>
         <div className={styles.fieldToolbarLeft}>
@@ -191,9 +192,16 @@ export function DenoProxyPickerField({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
-              navigate('/auth-files/deno-proxies', { state: { fromAuthFiles: true } })
-            }
+            onClick={() => {
+              const candidate = normalizeDenoProxyHostForMatch(value) || value.trim();
+              navigate(
+                {
+                  pathname: '/auth-files/deno-proxies',
+                  search: candidate ? `?search=${encodeURIComponent(candidate)}` : '',
+                },
+                { state: { fromAuthFiles: true } }
+              );
+            }}
           >
             {t('common.manage')}
           </Button>

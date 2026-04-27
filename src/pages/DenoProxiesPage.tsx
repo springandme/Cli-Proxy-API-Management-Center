@@ -10,14 +10,34 @@ import { denoProxiesApi } from '@/services/api/denoProxies';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import type { DenoProxyListResponse, DenoProxyUsageItem } from '@/types';
 import { copyToClipboard } from '@/utils/clipboard';
-import { denoProxyProbeLooksHealthy, parseBulkDenoProxyHosts } from '@/features/denoProxies/utils';
+import {
+  denoProxyProbeLooksHealthy,
+  normalizeDenoProxyHostForMatch,
+  parseBulkDenoProxyHosts,
+} from '@/features/denoProxies/utils';
 import styles from './DenoProxiesPage.module.scss';
 
 type LocationState = { fromAuthFiles?: boolean } | null;
 type FilterMode = 'all' | 'in-use' | 'unused' | 'unmanaged-in-use';
+type DenoProxySortMode = 'usage-desc' | 'usage-asc' | 'host-asc' | 'host-desc';
 type DenoProxyListEntry = {
   item: DenoProxyUsageItem;
   managed: boolean;
+};
+
+type Translator = (key: string, options?: Record<string, unknown>) => string;
+
+const formatUsageSourceLabel = (source: string, t: Translator) => {
+  switch (source) {
+    case 'auth-file':
+      return t('deno_proxies.source_auth_file');
+    case 'runtime-auth':
+      return t('deno_proxies.source_runtime_auth');
+    case 'codex-api-key':
+      return t('deno_proxies.source_codex_api_key');
+    default:
+      return source;
+  }
 };
 
 export function DenoProxiesPage() {
@@ -31,11 +51,20 @@ export function DenoProxiesPage() {
   const [data, setData] = useState<DenoProxyListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
+  const initialSearch = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return String(params.get('search') ?? '').trim();
+  }, [location.search]);
+  const [search, setSearch] = useState(initialSearch);
   const [filter, setFilter] = useState<FilterMode>('all');
+  const [sortMode, setSortMode] = useState<DenoProxySortMode>('usage-asc');
   const [bulkInput, setBulkInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [busyHost, setBusyHost] = useState('');
+
+  useEffect(() => {
+    setSearch(initialSearch);
+  }, [initialSearch]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -83,13 +112,24 @@ export function DenoProxiesPage() {
     [t]
   );
 
+  const sortOptions = useMemo(
+    () => [
+      { value: 'usage-asc', label: t('deno_proxies.picker_sort_usage_asc') },
+      { value: 'usage-desc', label: t('deno_proxies.picker_sort_usage_desc') },
+      { value: 'host-asc', label: t('deno_proxies.picker_sort_host_asc') },
+      { value: 'host-desc', label: t('deno_proxies.picker_sort_host_desc') },
+    ],
+    [t]
+  );
+
   const filteredEntries = useMemo(() => {
-    return entries.filter((entry) => {
+    const query = search.trim().toLowerCase();
+    const exactHostQuery = normalizeDenoProxyHostForMatch(search);
+    const filtered = entries.filter((entry) => {
       if (filter === 'in-use' && entry.item.usage_count <= 0) return false;
       if (filter === 'unused' && !entry.item.unused) return false;
       if (filter === 'unmanaged-in-use' && entry.managed) return false;
 
-      const query = search.trim().toLowerCase();
       if (!query) return true;
       const haystack = [
         entry.item.host,
@@ -104,7 +144,33 @@ export function DenoProxiesPage() {
         .toLowerCase();
       return haystack.includes(query);
     });
-  }, [entries, filter, search]);
+
+    filtered.sort((left, right) => {
+      const leftExact = exactHostQuery !== '' && left.item.host === exactHostQuery;
+      const rightExact = exactHostQuery !== '' && right.item.host === exactHostQuery;
+      if (leftExact !== rightExact) {
+        return leftExact ? -1 : 1;
+      }
+      if (sortMode === 'usage-desc') {
+        if (right.item.usage_count !== left.item.usage_count) {
+          return right.item.usage_count - left.item.usage_count;
+        }
+        return left.item.host.localeCompare(right.item.host);
+      }
+      if (sortMode === 'usage-asc') {
+        if (left.item.usage_count !== right.item.usage_count) {
+          return left.item.usage_count - right.item.usage_count;
+        }
+        return left.item.host.localeCompare(right.item.host);
+      }
+      if (sortMode === 'host-desc') {
+        return right.item.host.localeCompare(left.item.host);
+      }
+      return left.item.host.localeCompare(right.item.host);
+    });
+
+    return filtered;
+  }, [entries, filter, search, sortMode]);
 
   const handleBulkAdd = async () => {
     const { hosts, invalid } = parseBulkDenoProxyHosts(bulkInput);
@@ -268,6 +334,16 @@ export function DenoProxiesPage() {
                   fullWidth
                 />
               </div>
+              <div className={styles.filterWrap}>
+                <label>{t('deno_proxies.picker_sort_label')}</label>
+                <Select
+                  value={sortMode}
+                  options={sortOptions}
+                  onChange={(value) => setSortMode(value as DenoProxySortMode)}
+                  ariaLabel={t('deno_proxies.picker_sort_label')}
+                  fullWidth
+                />
+              </div>
             </div>
           </div>
 
@@ -361,7 +437,16 @@ export function DenoProxiesPage() {
                             {usedBy.name || usedBy.fileName || usedBy.id || usedBy.source}
                           </span>
                           <span className={styles.usedByMeta}>
-                            {[usedBy.source, usedBy.fileName, usedBy.authIndex, usedBy.baseUrl]
+                            {[
+                              formatUsageSourceLabel(usedBy.source, t),
+                              usedBy.fileName &&
+                              usedBy.fileName !== usedBy.name &&
+                              usedBy.fileName !== usedBy.label
+                                ? usedBy.fileName
+                                : '',
+                              usedBy.authIndex,
+                              usedBy.baseUrl,
+                            ]
                               .filter(Boolean)
                               .join(' · ')}
                           </span>
