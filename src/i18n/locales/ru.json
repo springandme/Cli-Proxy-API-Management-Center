@@ -685,6 +685,7 @@
     "list_title": "Управляемый пул",
     "search_placeholder": "Поиск по хосту или месту использования",
     "filter_label": "Фильтр",
+    "page_size_label": "Размер страницы",
     "filter_all": "Все",
     "filter_in_use": "Используется",
     "filter_unused": "Не используется",

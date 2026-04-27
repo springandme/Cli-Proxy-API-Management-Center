@@ -691,6 +691,7 @@
     "list_title": "代理池目录",
     "search_placeholder": "按 Host 或使用来源搜索",
     "filter_label": "筛选",
+    "page_size_label": "每页数量",
     "filter_all": "全部",
     "filter_in_use": "使用中",
     "filter_unused": "未使用",

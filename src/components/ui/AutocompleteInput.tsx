@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from 'react';
 import { IconChevronDown } from './icons';
 
 interface AutocompleteInputProps {
@@ -68,6 +76,13 @@ export function AutocompleteInput({
     setIsOpen(false);
   };
 
+  const handleToggleDropdown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (disabled) return;
+    setIsOpen((prev) => !prev);
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
@@ -126,7 +141,7 @@ export function AutocompleteInput({
                 cursor: 'pointer',
                 height: '100%'
             }}
-            onClick={() => !disabled && setIsOpen(!isOpen)}
+            onMouseDown={handleToggleDropdown}
         >
             {rightElement}
             <IconChevronDown size={16} style={{ opacity: 0.5, marginLeft: 4 }} />

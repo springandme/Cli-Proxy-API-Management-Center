@@ -20,6 +20,7 @@ import styles from './DenoProxiesPage.module.scss';
 type LocationState = { fromAuthFiles?: boolean } | null;
 type FilterMode = 'all' | 'in-use' | 'unused' | 'unmanaged-in-use';
 type DenoProxySortMode = 'usage-desc' | 'usage-asc' | 'host-asc' | 'host-desc';
+type PageSizeOption = 10 | 20 | 50;
 type DenoProxyListEntry = {
   item: DenoProxyUsageItem;
   managed: boolean;
@@ -58,6 +59,8 @@ export function DenoProxiesPage() {
   const [search, setSearch] = useState(initialSearch);
   const [filter, setFilter] = useState<FilterMode>('all');
   const [sortMode, setSortMode] = useState<DenoProxySortMode>('usage-asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSizeOption>(10);
   const [bulkInput, setBulkInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [busyHost, setBusyHost] = useState('');
@@ -122,6 +125,15 @@ export function DenoProxiesPage() {
     [t]
   );
 
+  const pageSizeOptions = useMemo(
+    () => [
+      { value: '10', label: '10 / page' },
+      { value: '20', label: '20 / page' },
+      { value: '50', label: '50 / page' },
+    ],
+    []
+  );
+
   const filteredEntries = useMemo(() => {
     const query = search.trim().toLowerCase();
     const exactHostQuery = normalizeDenoProxyHostForMatch(search);
@@ -171,6 +183,24 @@ export function DenoProxiesPage() {
 
     return filtered;
   }, [entries, filter, search, sortMode]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filter, sortMode, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  useEffect(() => {
+    if (page !== currentPage) {
+      setPage(currentPage);
+    }
+  }, [currentPage, page]);
+
+  const pagedEntries = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredEntries.slice(start, start + pageSize);
+  }, [currentPage, filteredEntries, pageSize]);
 
   const handleBulkAdd = async () => {
     const { hosts, invalid } = parseBulkDenoProxyHosts(bulkInput);
@@ -344,6 +374,16 @@ export function DenoProxiesPage() {
                   fullWidth
                 />
               </div>
+              <div className={styles.filterWrap}>
+                <label>{t('deno_proxies.page_size_label')}</label>
+                <Select
+                  value={String(pageSize)}
+                  options={pageSizeOptions}
+                  onChange={(value) => setPageSize(Number(value) as PageSizeOption)}
+                  ariaLabel={t('deno_proxies.page_size_label')}
+                  fullWidth
+                />
+              </div>
             </div>
           </div>
 
@@ -351,7 +391,7 @@ export function DenoProxiesPage() {
             <div className={styles.empty}>{t('deno_proxies.empty')}</div>
           ) : (
             <div className={styles.hostList}>
-              {filteredEntries.map((entry) => (
+              {pagedEntries.map((entry) => (
                 <div
                   key={`${entry.managed ? 'managed' : 'unmanaged'}:${entry.item.host}`}
                   className={styles.hostCard}
@@ -458,6 +498,34 @@ export function DenoProxiesPage() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {filteredEntries.length > pageSize && (
+            <div className={styles.pagination}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage <= 1}
+              >
+                {t('auth_files.pagination_prev')}
+              </Button>
+              <div className={styles.pageInfo}>
+                {t('auth_files.pagination_info', {
+                  current: currentPage,
+                  total: totalPages,
+                  count: filteredEntries.length,
+                })}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                {t('auth_files.pagination_next')}
+              </Button>
             </div>
           )}
         </Card>

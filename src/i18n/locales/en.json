@@ -691,6 +691,7 @@
     "list_title": "Managed Pool",
     "search_placeholder": "Search by host or usage target",
     "filter_label": "Filter",
+    "page_size_label": "Page size",
     "filter_all": "All",
     "filter_in_use": "In use",
     "filter_unused": "Unused",
