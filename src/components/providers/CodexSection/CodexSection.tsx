@@ -6,23 +6,21 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import iconCodex from '@/assets/icons/codex.svg';
 import type { ProviderKeyConfig } from '@/types';
 import { maskApiKey } from '@/utils/format';
-import { calculateStatusBarData, type KeyStats } from '@/utils/usage';
-import { type UsageDetailsByAuthIndex, type UsageDetailsBySource } from '@/utils/usageIndex';
+import { statusBarDataFromRecentRequests } from '@/utils/recentRequests';
 import styles from '@/pages/AiProvidersPage.module.scss';
 import { ProviderList } from '../ProviderList';
 import { ProviderStatusBar } from '../ProviderStatusBar';
 import {
-  collectUsageDetailsForIdentity,
   getProviderConfigKey,
-  getStatsForIdentity,
+  getProviderRecentBuckets,
+  getProviderTotalStats,
   hasDisableAllModelsRule,
+  type ProviderRecentUsageMap,
 } from '../utils';
 
 interface CodexSectionProps {
   configs: ProviderKeyConfig[];
-  keyStats: KeyStats;
-  usageDetailsBySource: UsageDetailsBySource;
-  usageDetailsByAuthIndex: UsageDetailsByAuthIndex;
+  usageByProvider: ProviderRecentUsageMap;
   loading: boolean;
   disableControls: boolean;
   isSwitching: boolean;
@@ -34,9 +32,7 @@ interface CodexSectionProps {
 
 export function CodexSection({
   configs,
-  keyStats,
-  usageDetailsBySource,
-  usageDetailsByAuthIndex,
+  usageByProvider,
   loading,
   disableControls,
   isSwitching,
@@ -50,25 +46,21 @@ export function CodexSection({
   const toggleDisabled = disableControls || loading || isSwitching;
 
   const statusBarCache = useMemo(() => {
-    const cache = new Map<string, ReturnType<typeof calculateStatusBarData>>();
+    const cache = new Map<string, ReturnType<typeof statusBarDataFromRecentRequests>>();
 
     configs.forEach((config, index) => {
       if (!config.apiKey) return;
       const configKey = getProviderConfigKey(config, index);
       cache.set(
         configKey,
-        calculateStatusBarData(
-          collectUsageDetailsForIdentity(
-            { authIndex: config.authIndex, apiKey: config.apiKey, prefix: config.prefix },
-            usageDetailsBySource,
-            usageDetailsByAuthIndex
-          )
+        statusBarDataFromRecentRequests(
+          getProviderRecentBuckets(usageByProvider, 'codex', config.apiKey, config.baseUrl)
         )
       );
     });
 
     return cache;
-  }, [configs, usageDetailsByAuthIndex, usageDetailsBySource]);
+  }, [configs, usageByProvider]);
 
   return (
     <>
@@ -91,8 +83,8 @@ export function CodexSection({
           keyField={(item, index) => getProviderConfigKey(item, index)}
           emptyTitle={t('ai_providers.codex_empty_title')}
           emptyDescription={t('ai_providers.codex_empty_desc')}
-          onEdit={onEdit}
-          onDelete={onDelete}
+          onEdit={(_, index) => onEdit(index)}
+          onDelete={(_, index) => onDelete(index)}
           actionsDisabled={actionsDisabled}
           getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
           renderExtraActions={(item, index) => (
@@ -104,15 +96,18 @@ export function CodexSection({
             />
           )}
           renderContent={(item, index) => {
-            const stats = getStatsForIdentity(
-              { authIndex: item.authIndex, apiKey: item.apiKey, prefix: item.prefix },
-              keyStats
+            const stats = getProviderTotalStats(
+              usageByProvider,
+              'codex',
+              item.apiKey,
+              item.baseUrl
             );
             const headerEntries = Object.entries(item.headers || {});
             const configDisabled = hasDisableAllModelsRule(item.excludedModels);
             const excludedModels = item.excludedModels ?? [];
             const statusData =
-              statusBarCache.get(getProviderConfigKey(item, index)) || calculateStatusBarData([]);
+              statusBarCache.get(getProviderConfigKey(item, index)) ||
+              statusBarDataFromRecentRequests([]);
             const relayMode = item.denoProxyHost?.trim() ? 'deno' : 'direct';
 
             return (
@@ -141,7 +136,9 @@ export function CodexSection({
                   </div>
                 )}
                 <div className={styles.fieldRow}>
-                  <span className={styles.fieldLabel}>{t('ai_providers.codex_relay_mode_label')}:</span>
+                  <span className={styles.fieldLabel}>
+                    {t('ai_providers.codex_relay_mode_label')}:
+                  </span>
                   <span className={styles.fieldValue}>
                     {relayMode === 'deno'
                       ? t('ai_providers.codex_relay_mode_deno')
@@ -150,7 +147,9 @@ export function CodexSection({
                 </div>
                 {item.denoProxyHost?.trim() && (
                   <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('ai_providers.codex_deno_proxy_host_label')}:</span>
+                    <span className={styles.fieldLabel}>
+                      {t('ai_providers.codex_deno_proxy_host_label')}:
+                    </span>
                     <span className={styles.fieldValue}>{item.denoProxyHost}</span>
                   </div>
                 )}
@@ -162,8 +161,12 @@ export function CodexSection({
                 )}
                 {item.websockets !== undefined && (
                   <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('ai_providers.codex_websockets_label')}:</span>
-                    <span className={styles.fieldValue}>{item.websockets ? t('common.yes') : t('common.no')}</span>
+                    <span className={styles.fieldLabel}>
+                      {t('ai_providers.codex_websockets_label')}:
+                    </span>
+                    <span className={styles.fieldValue}>
+                      {item.websockets ? t('common.yes') : t('common.no')}
+                    </span>
                   </div>
                 )}
                 {headerEntries.length > 0 && (
@@ -202,7 +205,10 @@ export function CodexSection({
                     </div>
                     <div className={styles.modelTagList}>
                       {excludedModels.map((model) => (
-                        <span key={model} className={`${styles.modelTag} ${styles.excludedModelTag}`}>
+                        <span
+                          key={model}
+                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                        >
                           <span className={styles.modelName}>{model}</span>
                         </span>
                       ))}
