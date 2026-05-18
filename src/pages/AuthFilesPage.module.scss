@@ -329,52 +329,6 @@
   white-space: nowrap;
 }
 
-.statusFilterGroup {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  min-height: 40px;
-  padding: 4px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
-  background-color: var(--bg-secondary);
-}
-
-.statusFilterButton {
-  min-width: 0;
-  height: 30px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color 0.16s ease,
-    color 0.16s ease,
-    box-shadow 0.16s ease;
-
-  &:hover {
-    color: var(--text-primary);
-    background: color-mix(in srgb, var(--bg-tertiary) 70%, transparent);
-  }
-
-  &:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--primary-color) 45%, transparent);
-    outline-offset: 1px;
-  }
-}
-
-.statusFilterButtonActive {
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--primary-color) 16%, var(--bg-tertiary));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 35%, transparent);
-}
-
 .pageSizeSelect {
   width: 100%;
   padding: 8px 12px;
@@ -1073,7 +1027,8 @@
   word-break: break-word;
 }
 
-.sortSelect {
+.sortSelect,
+.statusFilterSelect {
   width: 100%;
   min-width: 0;
 }

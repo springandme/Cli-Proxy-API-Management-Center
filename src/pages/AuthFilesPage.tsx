@@ -1058,23 +1058,18 @@ export function AuthFilesPage() {
                 </div>
                 <div className={styles.filterItem}>
                   <label>{t('auth_files.status_filter_label')}</label>
-                  <div className={styles.statusFilterGroup} role="group">
-                    {authStatusFilterOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`${styles.statusFilterButton} ${
-                          authStatusFilter === option.value ? styles.statusFilterButtonActive : ''
-                        }`}
-                        onClick={() => {
-                          setAuthStatusFilter(option.value);
-                          setPage(1);
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
+                  <Select
+                    className={styles.statusFilterSelect}
+                    value={authStatusFilter}
+                    options={authStatusFilterOptions}
+                    onChange={(value) => {
+                      if (!isAuthFilesStatusFilter(value) || value === authStatusFilter) return;
+                      setAuthStatusFilter(value);
+                      setPage(1);
+                    }}
+                    ariaLabel={t('auth_files.status_filter_label')}
+                    fullWidth
+                  />
                 </div>
                 <div className={`${styles.filterItem} ${styles.filterToggleItem}`}>
                   <label>{t('auth_files.display_options_label')}</label>
