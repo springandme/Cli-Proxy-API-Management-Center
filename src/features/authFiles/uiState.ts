@@ -1,10 +1,14 @@
 export const AUTH_FILES_SORT_MODES = ['default', 'az', 'priority'] as const;
+export const AUTH_FILES_STATUS_FILTERS = ['all', 'enabled', 'disabled'] as const;
 
 export type AuthFilesSortMode = (typeof AUTH_FILES_SORT_MODES)[number];
+export type AuthFilesStatusFilter = (typeof AUTH_FILES_STATUS_FILTERS)[number];
 
 export type AuthFilesUiState = {
   filter?: string;
   problemOnly?: boolean;
+  authStatusFilter?: AuthFilesStatusFilter;
+  // Legacy field kept for migrating saved UI state from older panel builds.
   disabledOnly?: boolean;
   compactMode?: boolean;
   search?: string;
@@ -18,9 +22,14 @@ export type AuthFilesUiState = {
 const AUTH_FILES_UI_STATE_KEY = 'authFilesPage.uiState';
 const AUTH_FILES_COMPACT_MODE_KEY = 'authFilesPage.compactMode';
 const AUTH_FILES_SORT_MODE_SET = new Set<AuthFilesSortMode>(AUTH_FILES_SORT_MODES);
+const AUTH_FILES_STATUS_FILTER_SET = new Set<AuthFilesStatusFilter>(AUTH_FILES_STATUS_FILTERS);
 
 export const isAuthFilesSortMode = (value: unknown): value is AuthFilesSortMode =>
   typeof value === 'string' && AUTH_FILES_SORT_MODE_SET.has(value as AuthFilesSortMode);
+
+export const isAuthFilesStatusFilter = (value: unknown): value is AuthFilesStatusFilter =>
+  typeof value === 'string' &&
+  AUTH_FILES_STATUS_FILTER_SET.has(value as AuthFilesStatusFilter);
 
 const readAuthFilesUiStateFromStorage = (
   storage: Pick<Storage, 'getItem'> | null | undefined
