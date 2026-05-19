@@ -241,11 +241,11 @@
 .filterControls {
   display: grid;
   grid-template-columns:
-    minmax(240px, 1.4fr)
-    minmax(96px, 0.5fr)
-    minmax(140px, 0.72fr)
-    minmax(240px, 0.95fr)
-    minmax(280px, 1fr);
+    minmax(260px, 1fr)
+    160px
+    220px
+    180px
+    minmax(360px, max-content);
   gap: $spacing-md;
   align-items: flex-end;
 
