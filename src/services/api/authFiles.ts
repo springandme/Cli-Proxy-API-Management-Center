@@ -1,5 +1,5 @@
 /**
- * 认证文件与 OAuth 排除模型相关 API
+ * Auth files and OAuth excluded models API.
  */
 
 import { apiClient } from './client';
@@ -324,7 +324,7 @@ const readTextField = (entry: AuthFileEntry, key: string): string => {
 };
 
 const readDateField = (entry: AuthFileEntry): number => {
-  const candidates = [entry['modtime'], entry.modified, entry['updated_at'], entry['last_refresh']];
+  const candidates = [entry['modtime'], entry['updated_at'], entry['last_refresh']];
 
   for (const value of candidates) {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -347,12 +347,7 @@ const readDateField = (entry: AuthFileEntry): number => {
   return 0;
 };
 
-const isRuntimeOnlyEntry = (entry: AuthFileEntry): boolean => {
-  const value = entry['runtime_only'] ?? entry.runtimeOnly;
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') return value.trim().toLowerCase() === 'true';
-  return false;
-};
+const isRuntimeOnlyEntry = (entry: AuthFileEntry): boolean => entry['runtime_only'] === true;
 
 const hasMeaningfulValue = (value: unknown): boolean => {
   if (value == null) return false;
@@ -661,7 +656,7 @@ export const authFilesApi = {
   saveJsonObject: (name: string, json: Record<string, unknown>) =>
     saveAuthFileText(name, JSON.stringify(json)),
 
-  // OAuth 排除模型
+  // OAuth excluded models.
   async getOauthExcludedModels(): Promise<Record<string, string[]>> {
     const data = await apiClient.get('/oauth-excluded-models');
     return normalizeOauthExcludedModels(data);
@@ -676,7 +671,7 @@ export const authFilesApi = {
   replaceOauthExcludedModels: (map: Record<string, string[]>) =>
     apiClient.put('/oauth-excluded-models', normalizeOauthExcludedModels(map)),
 
-  // OAuth 模型别名
+  // OAuth model aliases.
   async getOauthModelAlias(): Promise<Record<string, OAuthModelAliasEntry[]>> {
     const data = await apiClient.get(OAUTH_MODEL_ALIAS_ENDPOINT);
     return normalizeOauthModelAlias(data);
@@ -713,7 +708,7 @@ export const authFilesApi = {
     }
   },
 
-  // 获取认证凭证支持的模型
+  // Get models supported by an auth credential.
   async getModelsForAuthFile(
     name: string
   ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> {
@@ -726,7 +721,7 @@ export const authFilesApi = {
       : [];
   },
 
-  // 获取指定 channel 的模型定义
+  // Get model definitions for a channel.
   async getModelDefinitions(
     channel: string
   ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> {
