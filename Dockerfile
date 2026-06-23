@@ -1,17 +1,17 @@
-FROM node:20-alpine AS builder
+FROM oven/bun:1.3.14-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json bun.lock ./
 
-RUN npm ci
+RUN bun install --frozen-lockfile
 
 COPY . .
 
 ARG VERSION=dev
 ENV VERSION=${VERSION}
 
-RUN npm run build
+RUN bun run build
 
 FROM nginx:1.27-alpine
 
