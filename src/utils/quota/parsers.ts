@@ -12,7 +12,6 @@ import type {
 } from '@/types';
 import { normalizeAuthIndex } from '@/utils/authIndex';
 
-const GEMINI_CLI_MODEL_SUFFIX = '_vertex';
 export { normalizeAuthIndex };
 
 export function normalizeStringValue(value: unknown): string | null {
@@ -24,15 +23,6 @@ export function normalizeStringValue(value: unknown): string | null {
     return value.toString();
   }
   return null;
-}
-
-export function normalizeGeminiCliModelId(value: unknown): string | null {
-  const modelId = normalizeStringValue(value);
-  if (!modelId) return null;
-  if (modelId.endsWith(GEMINI_CLI_MODEL_SUFFIX)) {
-    return modelId.slice(0, -GEMINI_CLI_MODEL_SUFFIX.length);
-  }
-  return modelId;
 }
 
 export function normalizeNumberValue(value: unknown): number | null {
@@ -61,6 +51,11 @@ export function normalizeQuotaFraction(value: unknown): number | null {
 }
 
 export function normalizePlanType(value: unknown): string | null {
+  const normalized = normalizeStringValue(value);
+  return normalized ? normalized.toLowerCase() : null;
+}
+
+export function normalizeGeminiCliModelId(value: unknown): string | null {
   const normalized = normalizeStringValue(value);
   return normalized ? normalized.toLowerCase() : null;
 }

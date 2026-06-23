@@ -2,13 +2,9 @@
  * Quota constants for API URLs, headers, and theme colors.
  */
 
-import type {
-  AntigravityQuotaGroupDefinition,
-  GeminiCliQuotaGroupDefinition,
-  TypeColorSet,
-} from '@/types';
+import type { GeminiCliQuotaGroupDefinition, TypeColorSet } from '@/types';
 
-// Theme colors for type badges — 与 authFiles/constants.ts 保持同步
+// Theme colors for type badges. Keep in sync with authFiles/constants.ts.
 export const TYPE_COLORS: Record<string, TypeColorSet> = {
   qwen: {
     light: { bg: '#ede5fd', text: '#5530c7' },
@@ -66,60 +62,55 @@ export const TYPE_COLORS: Record<string, TypeColorSet> = {
 
 // Antigravity API configuration
 export const ANTIGRAVITY_QUOTA_URLS = [
-  'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels',
-  'https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:fetchAvailableModels',
-  'https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels',
+  'https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary',
+  'https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:retrieveUserQuotaSummary',
+  'https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary',
 ];
+
+export const ANTIGRAVITY_CODE_ASSIST_URL =
+  'https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist';
 
 export const ANTIGRAVITY_REQUEST_HEADERS = {
   Authorization: 'Bearer $TOKEN$',
   'Content-Type': 'application/json',
-  'User-Agent': 'antigravity/1.11.5 windows/amd64',
+  'User-Agent': 'antigravity/cli/1.0.8 darwin/arm64',
 };
 
-export const ANTIGRAVITY_QUOTA_GROUPS: AntigravityQuotaGroupDefinition[] = [
+// Claude API configuration
+export const CLAUDE_PROFILE_URL = 'https://api.anthropic.com/api/oauth/profile';
+
+export const CLAUDE_USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
+
+export const CLAUDE_REQUEST_HEADERS = {
+  Authorization: 'Bearer $TOKEN$',
+  'Content-Type': 'application/json',
+  'anthropic-beta': 'oauth-2025-04-20',
+};
+
+export const CLAUDE_USAGE_WINDOW_KEYS = [
+  { key: 'five_hour', id: 'five-hour', labelKey: 'claude_quota.five_hour' },
+  { key: 'seven_day', id: 'seven-day', labelKey: 'claude_quota.seven_day' },
   {
-    id: 'claude-gpt',
-    label: 'Claude/GPT',
-    identifiers: ['claude-sonnet-4-6', 'claude-opus-4-6-thinking', 'gpt-oss-120b-medium'],
+    key: 'seven_day_oauth_apps',
+    id: 'seven-day-oauth-apps',
+    labelKey: 'claude_quota.seven_day_oauth_apps',
   },
-  {
-    id: 'gemini-3-pro',
-    label: 'Gemini 3 Pro',
-    identifiers: ['gemini-3-pro-high', 'gemini-3-pro-low'],
-  },
-  {
-    id: 'gemini-3-1-pro-series',
-    label: 'Gemini 3.1 Pro Series',
-    identifiers: ['gemini-3.1-pro-high', 'gemini-3.1-pro-low'],
-  },
-  {
-    id: 'gemini-2-5-flash',
-    label: 'Gemini 2.5 Flash',
-    identifiers: ['gemini-2.5-flash', 'gemini-2.5-flash-thinking'],
-  },
-  {
-    id: 'gemini-2-5-flash-lite',
-    label: 'Gemini 2.5 Flash Lite',
-    identifiers: ['gemini-2.5-flash-lite'],
-  },
-  {
-    id: 'gemini-2-5-cu',
-    label: 'Gemini 2.5 CU',
-    identifiers: ['rev19-uic3-1p'],
-  },
-  {
-    id: 'gemini-3-flash',
-    label: 'Gemini 3 Flash',
-    identifiers: ['gemini-3-flash'],
-  },
-  {
-    id: 'gemini-image',
-    label: 'gemini-3.1-flash-image',
-    identifiers: ['gemini-3.1-flash-image'],
-    labelFromModel: true,
-  },
-];
+  { key: 'seven_day_opus', id: 'seven-day-opus', labelKey: 'claude_quota.seven_day_opus' },
+  { key: 'seven_day_sonnet', id: 'seven-day-sonnet', labelKey: 'claude_quota.seven_day_sonnet' },
+  { key: 'seven_day_cowork', id: 'seven-day-cowork', labelKey: 'claude_quota.seven_day_cowork' },
+  { key: 'iguana_necktie', id: 'iguana-necktie', labelKey: 'claude_quota.iguana_necktie' },
+] as const;
+
+// Codex API configuration
+export const CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
+export const CODEX_RATE_LIMIT_RESET_CREDITS_CONSUME_URL =
+  'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume';
+
+export const CODEX_REQUEST_HEADERS = {
+  Authorization: 'Bearer $TOKEN$',
+  'Content-Type': 'application/json',
+  'User-Agent': 'codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal',
+};
 
 // Gemini CLI API configuration
 export const GEMINI_CLI_QUOTA_URL =
@@ -165,40 +156,6 @@ export const GEMINI_CLI_GROUP_LOOKUP = new Map(
 );
 
 export const GEMINI_CLI_IGNORED_MODEL_PREFIXES = ['gemini-2.0-flash'];
-
-// Claude API configuration
-export const CLAUDE_PROFILE_URL = 'https://api.anthropic.com/api/oauth/profile';
-
-export const CLAUDE_USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
-
-export const CLAUDE_REQUEST_HEADERS = {
-  Authorization: 'Bearer $TOKEN$',
-  'Content-Type': 'application/json',
-  'anthropic-beta': 'oauth-2025-04-20',
-};
-
-export const CLAUDE_USAGE_WINDOW_KEYS = [
-  { key: 'five_hour', id: 'five-hour', labelKey: 'claude_quota.five_hour' },
-  { key: 'seven_day', id: 'seven-day', labelKey: 'claude_quota.seven_day' },
-  {
-    key: 'seven_day_oauth_apps',
-    id: 'seven-day-oauth-apps',
-    labelKey: 'claude_quota.seven_day_oauth_apps',
-  },
-  { key: 'seven_day_opus', id: 'seven-day-opus', labelKey: 'claude_quota.seven_day_opus' },
-  { key: 'seven_day_sonnet', id: 'seven-day-sonnet', labelKey: 'claude_quota.seven_day_sonnet' },
-  { key: 'seven_day_cowork', id: 'seven-day-cowork', labelKey: 'claude_quota.seven_day_cowork' },
-  { key: 'iguana_necktie', id: 'iguana-necktie', labelKey: 'claude_quota.iguana_necktie' },
-] as const;
-
-// Codex API configuration
-export const CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
-
-export const CODEX_REQUEST_HEADERS = {
-  Authorization: 'Bearer $TOKEN$',
-  'Content-Type': 'application/json',
-  'User-Agent': 'codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal',
-};
 
 // Kimi API configuration
 export const KIMI_USAGE_URL = 'https://api.kimi.com/coding/v1/usages';

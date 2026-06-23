@@ -4,10 +4,23 @@
 
 import type { AuthFileItem } from '@/types';
 import {
+  normalizeNumberValue,
   normalizeStringValue,
   normalizePlanType,
-  parseIdTokenPayload
+  parseIdTokenPayload,
 } from './parsers';
+
+const toRecord = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+};
+
+const resolveCodexAuthInfo = (value: unknown): Record<string, unknown> | null => {
+  const payload = parseIdTokenPayload(value);
+  if (!payload) return null;
+  const nested = toRecord(payload['https://api.openai.com/auth']);
+  return nested ?? payload;
+};
 
 export function extractCodexChatgptAccountId(value: unknown): string | null {
   const payload = parseIdTokenPayload(value);
@@ -67,7 +80,7 @@ export function resolveCodexPlanType(file: AuthFileItem): string | null {
     metadataIdToken?.planType,
     attributes?.plan_type,
     attributes?.planType,
-    attributes?.id_token
+    attributes?.id_token,
   ];
 
   for (const candidate of candidates) {
@@ -78,33 +91,109 @@ export function resolveCodexPlanType(file: AuthFileItem): string | null {
   return null;
 }
 
-export function extractGeminiCliProjectId(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const matches = Array.from(value.matchAll(/\(([^()]+)\)/g));
-  if (matches.length === 0) return null;
-  const candidate = matches[matches.length - 1]?.[1]?.trim();
-  return candidate ? candidate : null;
-}
+const normalizeDateLikeValue = (value: unknown): string | number | null => {
+  const numberValue = normalizeNumberValue(value);
+  if (numberValue === 0) return null;
+  if (numberValue !== null) return numberValue;
 
-export function resolveGeminiCliProjectId(file: AuthFileItem): string | null {
-  const metadata =
-    file && typeof file.metadata === 'object' && file.metadata !== null
-      ? (file.metadata as Record<string, unknown>)
-      : null;
-  const attributes =
-    file && typeof file.attributes === 'object' && file.attributes !== null
-      ? (file.attributes as Record<string, unknown>)
-      : null;
+  const stringValue = normalizeStringValue(value);
+  if (!stringValue || stringValue === '0') return null;
+  return stringValue;
+};
+
+export function resolveCodexSubscriptionActiveUntil(file: AuthFileItem): string | number | null {
+  const metadata = toRecord(file.metadata);
+  const attributes = toRecord(file.attributes);
+  const idToken = resolveCodexAuthInfo(file.id_token);
+  const metadataIdToken = resolveCodexAuthInfo(metadata?.id_token);
+  const attributesIdToken = resolveCodexAuthInfo(attributes?.id_token);
+  const subscription = toRecord(file.subscription);
+  const metadataSubscription = toRecord(metadata?.subscription);
+  const attributesSubscription = toRecord(attributes?.subscription);
 
   const candidates = [
-    file.account,
-    file['account'],
-    metadata?.account,
-    attributes?.account
+    file.chatgpt_subscription_active_until,
+    file.chatgptSubscriptionActiveUntil,
+    file.subscription_active_until,
+    file.subscriptionActiveUntil,
+    subscription?.active_until,
+    subscription?.activeUntil,
+    idToken?.chatgpt_subscription_active_until,
+    idToken?.chatgptSubscriptionActiveUntil,
+    metadata?.chatgpt_subscription_active_until,
+    metadata?.chatgptSubscriptionActiveUntil,
+    metadata?.subscription_active_until,
+    metadata?.subscriptionActiveUntil,
+    metadataSubscription?.active_until,
+    metadataSubscription?.activeUntil,
+    metadataIdToken?.chatgpt_subscription_active_until,
+    metadataIdToken?.chatgptSubscriptionActiveUntil,
+    attributes?.chatgpt_subscription_active_until,
+    attributes?.chatgptSubscriptionActiveUntil,
+    attributes?.subscription_active_until,
+    attributes?.subscriptionActiveUntil,
+    attributesSubscription?.active_until,
+    attributesSubscription?.activeUntil,
+    attributesIdToken?.chatgpt_subscription_active_until,
+    attributesIdToken?.chatgptSubscriptionActiveUntil,
   ];
 
   for (const candidate of candidates) {
-    const projectId = extractGeminiCliProjectId(candidate);
+    const value = normalizeDateLikeValue(candidate);
+    if (value !== null) return value;
+  }
+
+  return null;
+}
+
+export function resolveGeminiCliProjectId(file: AuthFileItem): string | null {
+  const candidates = [
+    file.project_id,
+    file.projectId,
+    file['project_id'],
+    file['projectId'],
+    file.quota_project_id,
+    file.quotaProjectId,
+    file['quota_project_id'],
+    file['quotaProjectId'],
+    file.gemini_virtual_project,
+    file.geminiVirtualProject,
+    file['gemini_virtual_project'],
+    file['geminiVirtualProject'],
+  ];
+
+  const metadata =
+    file.metadata && typeof file.metadata === 'object' && file.metadata !== null
+      ? (file.metadata as Record<string, unknown>)
+      : null;
+  if (metadata) {
+    candidates.push(
+      metadata.project_id,
+      metadata.projectId,
+      metadata.quota_project_id,
+      metadata.quotaProjectId,
+      metadata.gemini_virtual_project,
+      metadata.geminiVirtualProject
+    );
+  }
+
+  const attributes =
+    file.attributes && typeof file.attributes === 'object' && file.attributes !== null
+      ? (file.attributes as Record<string, unknown>)
+      : null;
+  if (attributes) {
+    candidates.push(
+      attributes.project_id,
+      attributes.projectId,
+      attributes.quota_project_id,
+      attributes.quotaProjectId,
+      attributes.gemini_virtual_project,
+      attributes.geminiVirtualProject
+    );
+  }
+
+  for (const candidate of candidates) {
+    const projectId = normalizeStringValue(candidate);
     if (projectId) return projectId;
   }
 
