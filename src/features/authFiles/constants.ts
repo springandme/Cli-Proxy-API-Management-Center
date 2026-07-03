@@ -56,6 +56,7 @@ export const AUTH_FILE_REFRESH_WARNING_MS = 24 * 60 * 60 * 1000;
 export const INTEGER_STRING_PATTERN = /^[+-]?\d+$/;
 export const TRUTHY_TEXT_VALUES = new Set(['true', '1', 'yes', 'y', 'on']);
 export const FALSY_TEXT_VALUES = new Set(['false', '0', 'no', 'n', 'off']);
+export const AUTH_FILE_WEBSOCKET_PROVIDERS = new Set(['codex', 'xai']);
 
 // Type colors are based on each provider logo palette and kept visually distinct.
 export const TYPE_COLORS: Record<string, TypeColorSet> = {
@@ -261,10 +262,15 @@ export const readCodexAuthFileDenoProxyHost = (value: Record<string, unknown>): 
   return typeof raw === 'string' ? raw.trim() : '';
 };
 
-export const readCodexAuthFileWebsockets = (value: Record<string, unknown>): boolean =>
+export const supportsAuthFileWebsockets = (providerKey: string): boolean =>
+  AUTH_FILE_WEBSOCKET_PROVIDERS.has(normalizeProviderKey(providerKey));
+
+export const readAuthFileWebsockets = (value: Record<string, unknown>): boolean =>
   parseDisableCoolingValue(value.websockets ?? value.websocket) ?? false;
 
-export const applyCodexAuthFileWebsockets = (
+export const readCodexAuthFileWebsockets = readAuthFileWebsockets;
+
+export const applyAuthFileWebsockets = (
   value: Record<string, unknown>,
   websockets: boolean
 ): Record<string, unknown> => {
@@ -273,6 +279,8 @@ export const applyCodexAuthFileWebsockets = (
   next.websockets = websockets;
   return next;
 };
+
+export const applyCodexAuthFileWebsockets = applyAuthFileWebsockets;
 
 export const applyCodexAuthFileDenoProxy = (
   value: Record<string, unknown>,

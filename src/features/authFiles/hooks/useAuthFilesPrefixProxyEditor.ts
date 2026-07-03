@@ -5,12 +5,13 @@ import type { AuthFileItem } from '@/types';
 import { useNotificationStore } from '@/stores';
 import {
   applyCodexAuthFileDenoProxy,
-  applyCodexAuthFileWebsockets,
+  applyAuthFileWebsockets,
   normalizeCodexRelayMode,
-  parsePriorityValue,
-  readCodexAuthFileDenoProxyHost,
-  readCodexAuthFileWebsockets,
   normalizeProviderKey,
+  parsePriorityValue,
+  readAuthFileWebsockets,
+  readCodexAuthFileDenoProxyHost,
+  supportsAuthFileWebsockets,
   type CodexRelayMode,
 } from '@/features/authFiles/constants';
 
@@ -264,6 +265,14 @@ const buildAuthFileFieldsPatch = (
     }
   }
 
+  if (supportsAuthFileWebsockets(editor.providerKey) && editor.websocketsTouched) {
+    const originalWebsockets = readAuthFileWebsockets(original);
+    const nextWebsockets = Boolean(editor.websockets);
+    if (nextWebsockets !== originalWebsockets) {
+      patch.websockets = nextWebsockets;
+    }
+  }
+
   if (editor.headersTouched) {
     const { value: parsedHeaders, errorKey } = parseHeadersText(editor.headersText);
     if (errorKey) {
@@ -285,13 +294,6 @@ const buildAuthFileFieldsPatch = (
       patch.deno_proxy_host = nextDenoProxyHost;
     }
 
-    if (editor.websocketsTouched) {
-      const originalWebsockets = readCodexAuthFileWebsockets(original);
-      const nextWebsockets = Boolean(editor.websockets);
-      if (nextWebsockets !== originalWebsockets) {
-        patch.websockets = nextWebsockets;
-      }
-    }
   }
 
   return patch;
@@ -338,7 +340,7 @@ const buildPrefixProxyUpdatedText = (
   applyHeadersPatch(next, patch.headers);
 
   if (patch.websockets !== undefined) {
-    next = applyCodexAuthFileWebsockets(next, patch.websockets);
+    next = applyAuthFileWebsockets(next, patch.websockets);
   }
 
   if (patch.deno_proxy_host !== undefined) {
@@ -447,12 +449,14 @@ export function useAuthFilesPrefixProxyEditor(
       let json = { ...(parsed as Record<string, unknown>) };
       const provider = normalizeProviderKey(String(json.type ?? file.type ?? file.provider ?? ''));
       const isCodexFile = provider === 'codex';
+      if (supportsAuthFileWebsockets(provider)) {
+        const normalizedWebsockets = readAuthFileWebsockets(json);
+        delete json.websocket;
+        json.websockets = normalizedWebsockets;
+      }
       if (isCodexFile) {
         const denoProxyHost = readCodexAuthFileDenoProxyHost(json);
         const relayMode = normalizeCodexRelayMode(denoProxyHost);
-        const normalizedWebsockets = readCodexAuthFileWebsockets(json);
-        delete json.websocket;
-        json.websockets = normalizedWebsockets;
         json = applyCodexAuthFileDenoProxy(json, relayMode, denoProxyHost);
       }
       const originalText = JSON.stringify(json);
@@ -464,7 +468,9 @@ export function useAuthFilesPrefixProxyEditor(
       const priority = parsePriorityValue(json.priority);
       const denoProxyHost = isCodexFile ? readCodexAuthFileDenoProxyHost(json) : '';
       const relayMode = isCodexFile ? normalizeCodexRelayMode(denoProxyHost) : 'direct';
-      const websockets = providerKey === 'codex' ? readCodexAuthFileWebsockets(json) : false;
+      const websockets = supportsAuthFileWebsockets(providerKey)
+        ? readAuthFileWebsockets(json)
+        : false;
       const note = typeof json.note === 'string' ? json.note : '';
       const headers = json.headers;
       let headersText = '';
