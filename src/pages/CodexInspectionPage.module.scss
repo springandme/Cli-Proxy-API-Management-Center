@@ -1,0 +1,424 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.pageTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.description {
+  margin: $spacing-xs 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.headerActions,
+.cardActions,
+.resultActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $spacing-md;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-height: 112px;
+
+  strong {
+    color: var(--text-primary);
+    font-size: 26px;
+    line-height: 1.1;
+  }
+
+  small {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+}
+
+.summaryLabel {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.configGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: $spacing-md;
+
+  @include tablet {
+    grid-template-columns: 1fr;
+  }
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.32fr) minmax(0, 0.68fr);
+  gap: $spacing-md;
+  align-items: start;
+
+  @include tablet {
+    grid-template-columns: 1fr;
+  }
+}
+
+.configCard,
+.cooldownCard,
+.runsCard,
+.resultsCard,
+.logsCard {
+  min-width: 0;
+}
+
+.settingList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+
+  > span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: $spacing-md;
+
+  @include tablet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  input,
+  select {
+    min-width: 0;
+    height: 38px;
+    border: 1px solid var(--border-color);
+    border-radius: $radius-md;
+    padding: 8px 10px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
+    }
+  }
+}
+
+.cooldownList,
+.runList,
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.cooldownItem,
+.runItem,
+.logItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+
+  strong,
+  small {
+    display: block;
+    min-width: 0;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+}
+
+.runItem {
+  cursor: pointer;
+  text-align: left;
+  transition: border-color $transition-fast, background-color $transition-fast;
+
+  &:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+  }
+}
+
+.runItemActive {
+  border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-secondary));
+}
+
+.cooldownMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.filterButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-full;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: $radius-full;
+    background: var(--count-badge-bg);
+    color: var(--count-badge-text);
+    font-size: 12px;
+  }
+}
+
+.filterButtonActive {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: var(--primary-contrast);
+
+  span {
+    background: color-mix(in srgb, var(--primary-contrast) 24%, transparent);
+    color: var(--primary-contrast);
+  }
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+}
+
+.resultTable {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+
+  td strong,
+  td small {
+    display: block;
+  }
+
+  td small {
+    margin-top: 3px;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+  }
+}
+
+.actionText {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-full;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusSuccess {
+  color: var(--success-badge-text);
+  border-color: var(--success-badge-border);
+  background: var(--success-badge-bg);
+}
+
+.statusWarning {
+  color: var(--amber-text);
+  border-color: var(--amber-30);
+  background: var(--amber-10);
+}
+
+.statusDanger {
+  color: var(--failure-badge-text);
+  border-color: var(--failure-badge-border);
+  background: var(--failure-badge-bg);
+}
+
+.statusMuted {
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.logItem {
+  justify-content: flex-start;
+
+  strong {
+    flex: 1 1 auto;
+  }
+}
+
+.emptyState {
+  padding: $spacing-lg;
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 14px;
+}
+
+.errorBox {
+  padding: $spacing-md;
+  border: 1px solid var(--danger-color);
+  border-radius: $radius-md;
+  background: var(--bg-error-light);
+  color: var(--danger-color);
+  font-size: 14px;
+}
+
+.loadingMask {
+  position: fixed;
+  inset: auto $spacing-lg $spacing-lg auto;
+  z-index: 20;
+  padding: 10px 14px;
+  border: 1px solid var(--floating-border);
+  border-radius: $radius-full;
+  background: var(--floating-surface);
+  box-shadow: var(--floating-shadow);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
