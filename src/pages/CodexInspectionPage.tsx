@@ -20,6 +20,11 @@ type ResultFilter = 'all' | 'disable' | 'enable' | 'delete' | 'reauth' | 'keep' 
 const ACTION_FILTERS: ResultFilter[] = ['all', 'disable', 'enable', 'delete', 'reauth', 'keep', 'failed'];
 
 const ACTIONABLE_ACTIONS = new Set(['disable', 'enable', 'delete']);
+const RUNS_PAGE_SIZE = 10;
+const RESULT_PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+const LOG_PAGE_SIZE_OPTIONS = [50, 100, 200] as const;
+
+type PageSizeOption = (typeof RESULT_PAGE_SIZE_OPTIONS)[number] | (typeof LOG_PAGE_SIZE_OPTIONS)[number];
 
 const DEFAULT_CONFIG: CodexInspectionConfig = {
   enabled: false,
@@ -112,6 +117,85 @@ function isActionable(result: CodexInspectionResult) {
   return ACTIONABLE_ACTIONS.has(result.action) && result.actionStatus !== 'success';
 }
 
+function clampPage(page: number, totalItems: number, pageSize: number) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  return Math.min(Math.max(page, 1), totalPages);
+}
+
+function pageItems<T>(items: T[], page: number, pageSize: number) {
+  const safePage = clampPage(page, items.length, pageSize);
+  const start = (safePage - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+}
+
+interface PaginationControlsProps {
+  page: number;
+  pageSize: number;
+  total: number;
+  pageSizeOptions?: readonly PageSizeOption[];
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+}
+
+function PaginationControls({
+  page,
+  pageSize,
+  total,
+  pageSizeOptions,
+  onPageChange,
+  onPageSizeChange,
+}: PaginationControlsProps) {
+  const { t } = useTranslation();
+  const safePage = clampPage(page, total, pageSize);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const start = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const end = Math.min(total, safePage * pageSize);
+
+  return (
+    <div className={styles.paginationBar}>
+      <span className={styles.paginationRange}>
+        {t('codex_inspection.pagination_range', { start, end, total })}
+      </span>
+      {pageSizeOptions && onPageSizeChange && (
+        <label className={styles.pageSizeControl}>
+          <span>{t('codex_inspection.page_size')}</span>
+          <select
+            value={pageSize}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+          >
+            {pageSizeOptions.map((option) => (
+              <option value={option} key={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <div className={styles.paginationButtons}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onPageChange(safePage - 1)}
+          disabled={safePage <= 1}
+        >
+          {t('codex_inspection.prev_page')}
+        </Button>
+        <span className={styles.pageIndicator}>
+          {safePage} / {totalPages}
+        </span>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onPageChange(safePage + 1)}
+          disabled={safePage >= totalPages}
+        >
+          {t('codex_inspection.next_page')}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function CodexInspectionPage() {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
@@ -129,6 +213,11 @@ export function CodexInspectionPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<ResultFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [runsPage, setRunsPage] = useState(1);
+  const [resultsPage, setResultsPage] = useState(1);
+  const [resultsPageSize, setResultsPageSize] = useState<number>(RESULT_PAGE_SIZE_OPTIONS[0]);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsPageSize, setLogsPageSize] = useState<number>(LOG_PAGE_SIZE_OPTIONS[0]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -136,7 +225,7 @@ export function CodexInspectionPage() {
     try {
       const [nextConfig, nextRuns, nextCooldowns] = await Promise.all([
         codexInspectionApi.getConfig(),
-        codexInspectionApi.listRuns(30),
+        codexInspectionApi.listRuns(200),
         codexInspectionApi.listCooldowns(true, 80),
       ]);
       setConfig(normalizeConfig(nextConfig));
@@ -148,6 +237,9 @@ export function CodexInspectionPage() {
         setDetail(null);
       }
       setSelectedIds(new Set());
+      setRunsPage(1);
+      setResultsPage(1);
+      setLogsPage(1);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('notification.refresh_failed');
       setError(message);
@@ -184,6 +276,46 @@ export function CodexInspectionPage() {
     const actionable = new Set(actionableFilteredResults.map((item) => item.id));
     return Array.from(selectedIds).filter((id) => actionable.has(id));
   }, [actionableFilteredResults, selectedIds]);
+
+  const currentRun = detail?.run;
+  const currentRunTotal = currentRun?.totalCount ?? currentRun?.totalFiles ?? 0;
+  const pendingCooldowns = cooldowns.filter((item) => item.status === 'pending').length;
+  const logs = useMemo(
+    () =>
+      [...(detail?.logs || [])].sort((a, b) => {
+        if ((a.createdAtMs || 0) === (b.createdAtMs || 0)) {
+          return b.id - a.id;
+        }
+        return (b.createdAtMs || 0) - (a.createdAtMs || 0);
+      }),
+    [detail?.logs]
+  );
+  const pagedRuns = useMemo(() => pageItems(runs, runsPage, RUNS_PAGE_SIZE), [runs, runsPage]);
+  const pagedResults = useMemo(
+    () => pageItems(filteredResults, resultsPage, resultsPageSize),
+    [filteredResults, resultsPage, resultsPageSize]
+  );
+  const pagedLogs = useMemo(
+    () => pageItems(logs, logsPage, logsPageSize),
+    [logs, logsPage, logsPageSize]
+  );
+
+  useEffect(() => {
+    setResultsPage(1);
+    setSelectedIds(new Set());
+  }, [filter, detail?.run.id]);
+
+  useEffect(() => {
+    setRunsPage((page) => clampPage(page, runs.length, RUNS_PAGE_SIZE));
+  }, [runs.length]);
+
+  useEffect(() => {
+    setResultsPage((page) => clampPage(page, filteredResults.length, resultsPageSize));
+  }, [filteredResults.length, resultsPageSize]);
+
+  useEffect(() => {
+    setLogsPage((page) => clampPage(page, logs.length, logsPageSize));
+  }, [logs.length, logsPageSize]);
 
   const updateConfig = (patch: Partial<CodexInspectionConfig>) => {
     setConfig((prev) => normalizeConfig({ ...prev, ...patch }));
@@ -223,13 +355,16 @@ export function CodexInspectionPage() {
     try {
       const nextDetail = await codexInspectionApi.runNow();
       const [nextRuns, nextCooldowns] = await Promise.all([
-        codexInspectionApi.listRuns(30),
+        codexInspectionApi.listRuns(200),
         codexInspectionApi.listCooldowns(true, 80),
       ]);
       setDetail(nextDetail);
       setRuns(nextRuns);
       setCooldowns(nextCooldowns);
       setSelectedIds(new Set());
+      setRunsPage(1);
+      setResultsPage(1);
+      setLogsPage(1);
       showNotification(t('codex_inspection.run_finished'), 'success');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('codex_inspection.run_failed');
@@ -246,6 +381,8 @@ export function CodexInspectionPage() {
     try {
       setDetail(await codexInspectionApi.getRun(run.id));
       setSelectedIds(new Set());
+      setResultsPage(1);
+      setLogsPage(1);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('notification.refresh_failed');
       setError(message);
@@ -268,7 +405,7 @@ export function CodexInspectionPage() {
 
   const toggleSelectAllActionable = () => {
     setSelectedIds((prev) => {
-      const actionableIds = actionableFilteredResults.map((item) => item.id);
+      const actionableIds = pagedResults.filter(isActionable).map((item) => item.id);
       const hasAll = actionableIds.length > 0 && actionableIds.every((id) => prev.has(id));
       const next = new Set(prev);
       for (const id of actionableIds) {
@@ -289,8 +426,9 @@ export function CodexInspectionPage() {
     try {
       const result = await codexInspectionApi.executeActions(detail.run.id, selectedActionableIds);
       setDetail(result.detail);
-      setRuns(await codexInspectionApi.listRuns(30));
+      setRuns(await codexInspectionApi.listRuns(200));
       setSelectedIds(new Set());
+      setResultsPage(1);
       showNotification(t('codex_inspection.actions_finished'), 'success');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('codex_inspection.actions_failed');
@@ -300,9 +438,6 @@ export function CodexInspectionPage() {
       setActing(false);
     }
   };
-
-  const currentRun = detail?.run;
-  const pendingCooldowns = cooldowns.filter((item) => item.status === 'pending').length;
 
   return (
     <div className={styles.container}>
@@ -334,7 +469,7 @@ export function CodexInspectionPage() {
         </Card>
         <Card className={styles.summaryCard}>
           <span className={styles.summaryLabel}>{t('codex_inspection.accounts')}</span>
-          <strong>{currentRun?.totalCount ?? 0}</strong>
+          <strong>{currentRunTotal}</strong>
           <small>
             {t('codex_inspection.summary_actions', {
               disable: currentRun?.disableCount ?? 0,
@@ -377,6 +512,7 @@ export function CodexInspectionPage() {
                 ariaLabel={t('codex_inspection.short_window_auto_disable')}
               />
             </label>
+            <div className={styles.configNote}>{t('codex_inspection.short_window_config_note')}</div>
             <div className={styles.fieldGrid}>
               <label>
                 <span>{t('codex_inspection.auto_action')}</span>
@@ -464,7 +600,7 @@ export function CodexInspectionPage() {
             {runs.length === 0 && (
               <div className={styles.emptyState}>{t('codex_inspection.runs_empty')}</div>
             )}
-            {runs.map((run) => (
+            {pagedRuns.map((run) => (
               <button
                 key={run.id}
                 type="button"
@@ -481,6 +617,12 @@ export function CodexInspectionPage() {
               </button>
             ))}
           </div>
+          <PaginationControls
+            page={runsPage}
+            pageSize={RUNS_PAGE_SIZE}
+            total={runs.length}
+            onPageChange={setRunsPage}
+          />
         </Card>
 
         <Card
@@ -492,9 +634,9 @@ export function CodexInspectionPage() {
                 variant="secondary"
                 size="sm"
                 onClick={toggleSelectAllActionable}
-                disabled={actionableFilteredResults.length === 0}
+                disabled={!pagedResults.some(isActionable)}
               >
-                {t('codex_inspection.select_actionable')}
+                {t('codex_inspection.select_page_actionable')}
               </Button>
               <Button
                 variant="primary"
@@ -529,13 +671,14 @@ export function CodexInspectionPage() {
                   <th>{t('codex_inspection.table_select')}</th>
                   <th>{t('codex_inspection.table_account')}</th>
                   <th>{t('codex_inspection.table_action')}</th>
+                  <th>{t('codex_inspection.table_executed_action')}</th>
                   <th>{t('codex_inspection.table_usage')}</th>
                   <th>{t('codex_inspection.table_reason')}</th>
                   <th>{t('codex_inspection.table_status')}</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredResults.map((result) => (
+                {pagedResults.map((result) => (
                   <tr key={result.id}>
                     <td>
                       {isActionable(result) && (
@@ -555,6 +698,19 @@ export function CodexInspectionPage() {
                       <span className={styles.actionText}>{t(actionLabelKey(result.action))}</span>
                     </td>
                     <td>
+                      <strong>
+                        {result.executedAction
+                          ? t(actionLabelKey(result.executedAction))
+                          : t('codex_inspection.not_executed')}
+                      </strong>
+                      {(result.actionStatus || result.actionError) && (
+                        <small>
+                          {t(statusLabelKey(result.actionStatus || 'pending'))}
+                          {result.actionError ? ` · ${result.actionError}` : ''}
+                        </small>
+                      )}
+                    </td>
+                    <td>
                       <strong>{formatPercent(result.usedPercent)}</strong>
                       <small>
                         {(result.quotaWindows || [])
@@ -572,7 +728,7 @@ export function CodexInspectionPage() {
                 ))}
                 {filteredResults.length === 0 && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className={styles.emptyState}>{t('codex_inspection.results_empty')}</div>
                     </td>
                   </tr>
@@ -580,15 +736,26 @@ export function CodexInspectionPage() {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            page={resultsPage}
+            pageSize={resultsPageSize}
+            total={filteredResults.length}
+            pageSizeOptions={RESULT_PAGE_SIZE_OPTIONS}
+            onPageChange={setResultsPage}
+            onPageSizeChange={(pageSize) => {
+              setResultsPageSize(pageSize);
+              setResultsPage(1);
+            }}
+          />
         </Card>
       </div>
 
       <Card title={t('codex_inspection.logs_title')} className={styles.logsCard}>
         <div className={styles.logList}>
-          {(detail?.logs || []).length === 0 && (
+          {logs.length === 0 && (
             <div className={styles.emptyState}>{t('codex_inspection.logs_empty')}</div>
           )}
-          {(detail?.logs || []).slice(-80).map((entry) => (
+          {pagedLogs.map((entry) => (
             <div className={styles.logItem} key={entry.id}>
               <span className={`${styles.statusPill} ${statusClass(entry.level)}`}>{entry.level}</span>
               <strong>{entry.message}</strong>
@@ -596,6 +763,17 @@ export function CodexInspectionPage() {
             </div>
           ))}
         </div>
+        <PaginationControls
+          page={logsPage}
+          pageSize={logsPageSize}
+          total={logs.length}
+          pageSizeOptions={LOG_PAGE_SIZE_OPTIONS}
+          onPageChange={setLogsPage}
+          onPageSizeChange={(pageSize) => {
+            setLogsPageSize(pageSize);
+            setLogsPage(1);
+          }}
+        />
       </Card>
 
       {loading && <div className={styles.loadingMask}>{t('common.loading')}</div>}

@@ -28,6 +28,9 @@ export interface CodexInspectionRun {
   triggerKey?: string;
   status: string;
   totalCount?: number;
+  totalFiles?: number;
+  probeSetCount?: number;
+  sampledCount?: number;
   enabledCount?: number;
   disabledCount?: number;
   deleteCount?: number;
@@ -66,6 +69,9 @@ export interface CodexInspectionResult {
   action: string;
   actionReason?: string;
   actionStatus?: string;
+  executedAction?: string;
+  actionError?: string;
+  statusCode?: number;
   usedPercent?: number;
   isQuota?: boolean;
   quotaWindows?: CodexInspectionQuotaWindow[];

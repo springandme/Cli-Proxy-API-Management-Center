@@ -142,6 +142,16 @@
   }
 }
 
+.configNote {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 22%, var(--border-color));
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--bg-secondary));
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .fieldGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(120px, 1fr));
@@ -189,6 +199,18 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
+}
+
+.runList {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.logList {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .cooldownItem,
@@ -295,14 +317,15 @@
 
 .tableWrap {
   width: 100%;
-  overflow-x: auto;
+  max-height: 620px;
+  overflow: auto;
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
 }
 
 .resultTable {
   width: 100%;
-  min-width: 860px;
+  min-width: 1040px;
   border-collapse: collapse;
 
   th,
@@ -316,6 +339,9 @@
   }
 
   th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     background: var(--bg-secondary);
     color: var(--text-secondary);
     font-size: 12px;
@@ -347,6 +373,58 @@
 .actionText {
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.paginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
+
+  @include mobile {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.paginationRange {
+  white-space: nowrap;
+}
+
+.pageSizeControl {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  white-space: nowrap;
+
+  select {
+    height: 32px;
+    border: 1px solid var(--border-color);
+    border-radius: $radius-md;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+.paginationButtons {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+}
+
+.pageIndicator {
+  min-width: 56px;
+  color: var(--text-primary);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .statusPill {
